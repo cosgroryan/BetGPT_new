@@ -1,0 +1,237 @@
+*** 1,1 ****
+--- /Users/ryan/Clean Repo/BetGPT_new/racing_gui.py
++++ /Users/ryan/Clean Repo/BetGPT_new/racing_gui.py
+@@
+ class RacingGUI(tk.Tk):
+@@
+-    def on_load_races(self):
+-        try:
+-            sel = self.meeting_var.get()
+-            mid = self.meeting_display_to_id.get(sel)
+-            if not mid:
+-                messagebox.showwarning("Meeting", "Pick a meeting first.")
+-                return
+-            params = {"enc": "json"}
+-            r = self.session.get(f"{AFF_BASE}/meetings/{mid}", headers=HEADERS, params=params, timeout=TIMEOUT)
+-            r.raise_for_status()
+-            js = r.json()
+-            self.current_meeting_detail = js
+-            # fill races table
+-            self.tree.delete(*self.tree.get_children())
+-            mtgs = unwrap_meetings(js)
+-            if not mtgs:
+-                messagebox.showinfo("Races", "No races found in this meeting.")
+-                return
+-            meet = mtgs[0]
+-            races = meet.get("races") or []
+-            for rc in races:
+-                race_id = rc.get("id") or rc.get("race_id")
+-                start_utc = parse_start_to_utc(rc)
+-                start_str = fmt_dt_nz(start_utc)
+-                entrants, tote_avail, handle = summarize_tab_race(rc) if rc else (None, False, None)
+-                t2j = minutes_to_jump_utc(start_utc)
+-                self.tree.insert("", "end", values=(
+-                    rc.get("race_number"), rc.get("description") or rc.get("name"),
+-                    rc.get("class") or rc.get("class_level") or "",
+-                    race_id, start_str, entrants or "", "Yes" if tote_avail else "No",
+-                    fmt_money(handle) if handle else "", t2j if isinstance(t2j, int) else ""
+-                ))
+-        except Exception as e:
+-            messagebox.showerror("Races", f"Failed to load races:\n{e}")
++    def on_load_races(self):
++        """
++        Load meeting -> races and, for each race, also pull the TAB odds node to
++        compute Entrants, Tote? and Handle$ columns. This restores the loop that
++        previously populated Handle$ and Tote? and ensures Kelly% can use WinTote.
++        """
++        try:
++            sel = self.meeting_var.get()
++            mid = self.meeting_display_to_id.get(sel)
++            if not mid:
++                messagebox.showwarning("Meeting", "Pick a meeting first.")
++                return
++            params = {"enc": "json"}
++            r = self.session.get(f"{AFF_BASE}/meetings/{mid}", headers=HEADERS, params=params, timeout=TIMEOUT)
++            r.raise_for_status()
++            js = r.json()
++            self.current_meeting_detail = js
++            # fill races table
++            self.tree.delete(*self.tree.get_children())
++            mtgs = unwrap_meetings(js)
++            if not mtgs:
++                messagebox.showinfo("Races", "No races found in this meeting.")
++                return
++            meet = mtgs[0]
++            races = meet.get("races") or []
++
++            date_str = (self.date_var.get() or "").strip()
++            meetno = self.current_meetno()
++
++            for rc in races:
++                race_id = rc.get("id") or rc.get("race_id")
++                raceno = safe_int(rc.get("race_number"))
++                start_utc = parse_start_to_utc(rc)
++                start_str = fmt_dt_nz(start_utc)
++
++                # Pull the TAB odds race node to compute Tote? and Handle$
++                entrants = tote_avail = handle = None
++                try:
++                    race_node = fetch_tab_race_node(self.session, date_str, meetno, raceno)
++                    entrants, tote_avail, handle = summarize_tab_race(race_node)
++                except Exception:
++                    pass
++
++                t2j = minutes_to_jump_utc(start_utc)
++                self.tree.insert("", "end", values=(
++                    rc.get("race_number"), rc.get("description") or rc.get("name"),
++                    rc.get("class") or rc.get("class_level") or "",
++                    race_id, start_str, entrants or "", "Yes" if tote_avail else "No",
++                    fmt_money(handle) if handle else "", t2j if isinstance(t2j, int) else ""
++                ))
++        except Exception as e:
++            messagebox.showerror("Races", f"Failed to load races:\n{e}")
+@@
+-    def open_selected_race(self):
+-        try:
+-            sel = self.tree.selection()
+-            if not sel:
+-                messagebox.showinfo("Open race", "Select a race in the meeting table.")
+-                return
+-            race_id = self.tree.set(sel[0], "race_id")
+-            params = {"enc": "json"}
+-            r = self.session.get(f"{AFF_BASE}/events/{race_id}", headers=HEADERS, params=params, timeout=TIMEOUT)
+-            r.raise_for_status()
+-            payload = r.json()
+-            # merge odds if requested
+-            if self.merge_odds.get():
+-                # need date, meetno, raceno
+-                date_str = (self.date_var.get() or "").strip()
+-                meetno = self.current_meetno()
+-                raceno = safe_int(self.tree.set(sel[0], "race_number"))
+-                markets = fetch_tab_odds(self.session, date_str, meetno, raceno)
+-                prices_by_num = extract_prices_from_markets(markets)
+-                merge_odds_into_event(payload, prices_by_num)
+-            self.current_event_payload = payload
+-            RaceViewer(self, payload, title="Race")
+-        except Exception as e:
+-            messagebox.showerror("Open race", f"Failed to open race:\n{e}")
++    def open_selected_race(self):
++        """
++        Ensure tote odds are merged into the event before opening the RaceViewer
++        so that Kelly% (which prefers WinTote as fair) is available.
++        """
++        try:
++            sel = self.tree.selection()
++            if not sel:
++                messagebox.showinfo("Open race", "Select a race in the meeting table.")
++                return
++            race_id = self.tree.set(sel[0], "race_id")
++            params = {"enc": "json"}
++            r = self.session.get(f"{AFF_BASE}/events/{race_id}", headers=HEADERS, params=params, timeout=TIMEOUT)
++            r.raise_for_status()
++            payload = r.json()
++            # merge odds if requested
++            if self.merge_odds.get():
++                date_str = (self.date_var.get() or "").strip()
++                meetno = self.current_meetno()
++                raceno = safe_int(self.tree.set(sel[0], "race_number"))
++                markets = fetch_tab_odds(self.session, date_str, meetno, raceno)
++                prices_by_num = extract_prices_from_markets(markets)
++                merge_odds_into_event(payload, prices_by_num)
++            self.current_event_payload = payload
++            RaceViewer(self, payload, title="Race")
++        except Exception as e:
++            messagebox.showerror("Open race", f"Failed to open race:\n{e}")
+*** 1,1 ****
+--- /Users/ryan/Clean Repo/BetGPT_new/racing_gui.py
++++ /Users/ryan/Clean Repo/BetGPT_new/racing_gui.py
+@@
+ class RaceViewer(tk.Toplevel):
+@@
+-        # Top runners table
++        # --- Model ensemble for visualisation (per-runner) ---
++        try:
++            race_df = pd.DataFrame([
++                {"runner_number": r.get("no"), "runner_name": r.get("name")}
++                for r in self.runners
++            ])
++            preds = self.parent.model_predictor.predict_probs(race_df)
++            ens = preds["ensemble"]["win"]
++            for i, rr in enumerate(self.runners):
++                rr["model_p"] = float(ens[i])
++        except Exception:
++            for rr in self.runners:
++                rr["model_p"] = None
++
++        # Top runners table
+         table_frame = ttk.Frame(self, padding=(10, 6, 10, 6))
+         table_frame.pack(fill="both", expand=True)
+@@
+-        # ----- Notebook: Signals / Staking / Notes -----
++        # ----- Notebook: Signals / Staking / Notes -----
+         nb = ttk.Notebook(self)
+         nb.pack(side="top", fill="both", expand=True, padx=10, pady=(0, 10))
+@@
+-        sig_cols = ("no","name","winfx","wintote","imp","firm","ewov","kelly","pace","edge")
++        sig_cols = ("no","name","winfx","wintote","imp","firm","ewov","kelly","modelp","pace","edge")
+         self.sig_tree = ttk.Treeview(sig_frame, columns=sig_cols, show="headings", height=10)
+-        for cid, label in zip(sig_cols, ["#","Runner","WinFx","WinTote","Imp%","Firm%","EWov%","Kelly%","Pace","Edge"]):
++        for cid, label in zip(sig_cols, ["#","Runner","WinFx","WinTote","Imp%","Firm%","EWov%","Kelly%","Model%","Pace","Edge"]):
+             self.sig_tree.heading(cid, text=label)
+ 
+-        for cid, w, anchor in [
+-            ("no",60,"center"),("name",260,"w"),("winfx",80,"center"),("wintote",80,"center"),
+-            ("imp",80,"center"),("firm",80,"center"),("ewov",80,"center"),("kelly",80,"center"),
+-            ("pace",120,"w"),("edge",160,"w")
+-        ]:
++        for cid, w, anchor in [
++            ("no",60,"center"),("name",260,"w"),("winfx",80,"center"),("wintote",80,"center"),
++            ("imp",80,"center"),("firm",80,"center"),("ewov",80,"center"),("kelly",80,"center"),
++            ("modelp",80,"center"),("pace",120,"w"),("edge",160,"w")
++        ]:
+             self.sig_tree.column(cid, width=w, anchor=anchor)
+@@
+-        for r in self.runners:
++        for r in self.runners:
+             m = r["metrics"]
+             self.sig_tree.insert(
+                 "",
+                 "end",
+                 iid=f"r{r.get('no')}",
+                 values=(
+                     r.get("no") or "",
+                     r.get("name") or "",
+                     fmt_price(m.get("win_fx")),
+                     fmt_price(m.get("win_tote")),
+                     pct(m.get("imp_win")),
+                     pct(m.get("firming_pct")),
+                     pct(m.get("ew_overlay_pct")),
+                     pct(m.get("kelly_pct1x")),
++                    pct(r.get("model_p")),
+                     m.get("pace") or "",
+                     m.get("edge") or "",
+                 ),
+             )
+*** 1,1 ****
+--- /Users/ryan/Clean Repo/BetGPT_new/racing_gui.py
++++ /Users/ryan/Clean Repo/BetGPT_new/racing_gui.py
+@@
+     def _build_race_df_from_event(self, event_payload):
+         """Minimal race_df needed for model_features: runner_number, runner_name"""
+         try:
+             data = event_payload.get("data") or event_payload
+             arr = data.get("runners")
+             if not arr:
+                 mtgs = unwrap_meetings(event_payload)
+                 for race in mtgs[0].get("races", []):
+                     if race.get("runners"):
+                         arr = race["runners"]; break
+             rows = []
+             for r in arr or []:
+                 rows.append({
+                     "runner_number": safe_int(r.get("runner_number") or r.get("number")),
+                     "runner_name": r.get("name"),
+                 })
+             return pd.DataFrame(rows)
+         except Exception:
+             return pd.DataFrame()
