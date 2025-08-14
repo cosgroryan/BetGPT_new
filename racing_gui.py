@@ -983,12 +983,49 @@ class RaceViewer(tk.Toplevel):
         nb = ttk.Notebook(self)
         nb.pack(side="top", fill="both", expand=True, padx=10, pady=(0, 10))
 
+        # Signals tab
         self.sig_frame = ttk.Frame(nb, padding=10)
         nb.add(self.sig_frame, text="Signals")
 
-        # Signals tab
-        sig_cols = ("no","name","winfx","wintote","model_nn","model_reg","model_rank","imp","firm","ewov","kelly","pace","edge")
-        self.sig_tree = ttk.Treeview(self.sig_frame, columns=sig_cols, show="headings", height=10)
+        # inner holder (pack this holder; use grid inside it)
+        self.sig_table_frame = ttk.Frame(self.sig_frame)
+        self.sig_table_frame.pack(fill="both", expand=True)
+
+        sig_cols = (
+            "no","name","winfx","wintote",
+            "model_nn","model_reg","model_rank",
+            "imp","firm","ewov","kelly","pace","edge"
+        )
+        self.sig_tree = ttk.Treeview(self.sig_table_frame, columns=sig_cols, show="headings")
+
+        for cid, label in zip(
+            sig_cols,
+            ["#","Runner","WinFx","WinTote","Model_NN%","Model_Reg%","Model_Rank%",
+            "Imp%","Firm%","EWov%","Kelly%","Pace","Edge"]
+        ):
+            self.sig_tree.heading(cid, text=label)
+
+        for cid, w, anchor in [
+            ("no",60,"center"), ("name",260,"w"),
+            ("winfx",80,"center"), ("wintote",80,"center"),
+            ("model_nn",90,"center"), ("model_reg",90,"center"), ("model_rank",90,"center"),
+            ("imp",80,"center"), ("firm",80,"center"), ("ewov",80,"center"),
+            ("kelly",80,"center"), ("pace",120,"w"), ("edge",160,"w")
+        ]:
+            self.sig_tree.column(cid, width=w, anchor=anchor)
+
+        # attach BOTH scrollbars to the same frame, using GRID
+        sig_vsb = ttk.Scrollbar(self.sig_table_frame, orient="vertical",   command=self.sig_tree.yview)
+        sig_hsb = ttk.Scrollbar(self.sig_table_frame, orient="horizontal", command=self.sig_tree.xview)
+        self.sig_tree.configure(yscroll=sig_vsb.set, xscroll=sig_hsb.set)
+
+        self.sig_tree.grid(row=0, column=0, sticky="nsew")
+        sig_vsb.grid(row=0, column=1, sticky="ns")
+        sig_hsb.grid(row=1, column=0, sticky="ew")
+
+        self.sig_table_frame.rowconfigure(0, weight=1)
+        self.sig_table_frame.columnconfigure(0, weight=1)
+
 
         for cid, label in zip(
             sig_cols,
@@ -1004,11 +1041,6 @@ class RaceViewer(tk.Toplevel):
         ]:
             self.sig_tree.column(cid, width=w, anchor=anchor)
 
-
-        sig_vsb = ttk.Scrollbar(self.sig_frame, orient="vertical", command=self.sig_tree.yview)
-        self.sig_tree.configure(yscroll=sig_vsb.set)
-        self.sig_tree.pack(side="left", fill="both", expand=True)
-        sig_vsb.pack(side="right", fill="y")
 
         # Fill Signals grid (metrics + Model%)
         self.sig_tree.delete(*self.sig_tree.get_children())
@@ -1113,6 +1145,20 @@ class RaceViewer(tk.Toplevel):
             return float(s)
         except Exception:
             return None
+
+
+    # helper (drop this inside RaceViewer class)
+    def _attach_scrollbars(self, parent, tree):
+        """Attach vertical + horizontal scrollbars to a Treeview."""
+        vsb = ttk.Scrollbar(parent, orient="vertical", command=tree.yview)
+        hsb = ttk.Scrollbar(parent, orient="horizontal", command=tree.xview)
+        tree.configure(yscroll=vsb.set, xscroll=hsb.set)
+        # layout: tree left/top, vsb right, hsb bottom
+        tree.grid(row=0, column=0, sticky="nsew")
+        vsb.grid(row=0, column=1, sticky="ns")
+        hsb.grid(row=1, column=0, sticky="ew")
+        parent.rowconfigure(0, weight=1)
+        parent.columnconfigure(0, weight=1)
 
     # ----- Picks loading
     def load_selected_picks(self):
