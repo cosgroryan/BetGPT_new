@@ -1,5 +1,6 @@
 # venvs
 .venv*/
+.venv_mac*/
 venv*/
 ENV*/
 
@@ -21,9 +22,7 @@ __pycache__/
 Thumbs.db
 
 # extra big files to ignore
-five_year_dataset.parquet
 tab_results_master.ndjson
 tab_schedule_master.ndjson
 runners_flat.csv
-model_regression.pth
-preprocess.pkl
+

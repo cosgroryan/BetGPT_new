@@ -291,30 +291,39 @@ def main():
                 buf.append(MEET_BREAK)
                 buf.append("")
 
-    # Write files
-    fn_nn   = f"dayslip_nn_{date_str}.txt"
-    fn_rank = f"dayslip_lgbm_rank_{date_str}.txt"
-    fn_reg  = f"dayslip_lgbm_reg_{date_str}.txt"
-    fn_all  = f"dayslip_combined_{date_str}.txt"
-    fn_star = f"dayslip_starred_{date_str}.txt"
+        import os
 
-    with open(fn_nn, "w", encoding="utf-8") as f:
-        f.write("\n".join(nn_file) + "\n")
-    with open(fn_rank, "w", encoding="utf-8") as f:
-        f.write("\n".join(rank_file) + "\n")
-    with open(fn_reg, "w", encoding="utf-8") as f:
-        f.write("\n".join(reg_file) + "\n")
-    with open(fn_all, "w", encoding="utf-8") as f:
-        f.write("\n".join(combined) + "\n")
-    with open(fn_star, "w", encoding="utf-8") as f:
-        f.write("\n".join(starred_file) + "\n")
+        # Ensure output folder exists
+        out_dir = "dayslips"
+        os.makedirs(out_dir, exist_ok=True)
 
-    print("\nSaved:")
-    print(f"  {fn_nn}")
-    print(f"  {fn_rank}")
-    print(f"  {fn_reg}")
-    print(f"  {fn_all}")
-    print(f"  {fn_star}")
+        meets, date_str = parse_args(sys.argv[1:])
+
+        # Update file paths to be inside dayslips/
+        fn_nn   = os.path.join(out_dir, f"dayslip_nn_{date_str}.txt")
+        fn_rank = os.path.join(out_dir, f"dayslip_lgbm_rank_{date_str}.txt")
+        fn_reg  = os.path.join(out_dir, f"dayslip_lgbm_reg_{date_str}.txt")
+        fn_all  = os.path.join(out_dir, f"dayslip_combined_{date_str}.txt")
+        fn_star = os.path.join(out_dir, f"dayslip_starred_{date_str}.txt")
+
+        with open(fn_nn, "w", encoding="utf-8") as f:
+            f.write("\n".join(nn_file) + "\n")
+        with open(fn_rank, "w", encoding="utf-8") as f:
+            f.write("\n".join(rank_file) + "\n")
+        with open(fn_reg, "w", encoding="utf-8") as f:
+            f.write("\n".join(reg_file) + "\n")
+        with open(fn_all, "w", encoding="utf-8") as f:
+            f.write("\n".join(combined) + "\n")
+        with open(fn_star, "w", encoding="utf-8") as f:
+            f.write("\n".join(starred_file) + "\n")
+
+        print("\nSaved:")
+        print(f"  {fn_nn}")
+        print(f"  {fn_rank}")
+        print(f"  {fn_reg}")
+        print(f"  {fn_all}")
+        print(f"  {fn_star}")
+
 
 if __name__ == "__main__":
     main()
