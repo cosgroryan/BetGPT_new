@@ -1,0 +1,36 @@
+{
+  "test_loss": 3.37781845255101,
+  "test_mae": 1.3114176655550456,
+  "test_rmse": 1.8365818081176568,
+  "test_spearman": 0.8426485391342377,
+  "numeric_cols": [
+    "meeting_number",
+    "race_number",
+    "race_distance_m",
+    "stake",
+    "fav_rank",
+    "race_length",
+    "race_number_sched",
+    "entrant_weight",
+    "horse_starts_prior",
+    "horse_win_rate_prior",
+    "horse_top3_rate_prior",
+    "horse_avg_finish_prior",
+    "horse_last_finish",
+    "horse_avg_fav_rank_prior",
+    "horse_avg_margin_prior",
+    "days_since_last_run"
+  ],
+  "categorical_cols": [
+    "race_class",
+    "race_track",
+    "race_weather",
+    "meeting_country",
+    "meeting_venue",
+    "source_section",
+    "race_class_sched",
+    "entrant_barrier",
+    "entrant_jockey",
+    "runner_name"
+  ]
+}

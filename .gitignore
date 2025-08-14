@@ -1,0 +1,32 @@
+# venvs
+.venv*/
+venv*/
+ENV*/
+
+# builds and caches
+dist/
+build/
+__pycache__/
+*.spec
+*.pyc
+
+# large data and artefacts
+*.parquet
+*.ndjson
+*.pth
+*.pkl
+*.bin
+*.ico
+*.icns
+
+# OS cruft
+.DS_Store
+Thumbs.db
+
+# extra big files to ignore
+five_year_dataset.parquet
+tab_results_master.ndjson
+tab_schedule_master.ndjson
+runners_flat.csv
+model_regression.pth
+preprocess.pkl

@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Model Codebreaker Dashboard — up to 3 models</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root{ --bg:#0b1020; --panel:#121a34; --grid:#1f2a5a; --ink:#e9eeff; --muted:#8ea0d9;
+         --g:#10b981; --y:#f59e0b; --r:#ef4444; --card:#0f1733; }
+  *{box-sizing:border-box}
+  body{margin:0;background:linear-gradient(180deg,#0a0f22,#0e1630);color:var(--ink);
+       font:14px/1.55 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial}
+  header{padding:20px 14px 0;text-align:center}
+  header h1{margin:0 0 6px;font-size:22px}
+  header p{margin:0 0 12px;color:var(--muted)}
+  .wrap{max-width:1600px;margin:12px auto 60px;padding:0 12px}
+  .controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+  .drop{border:1.5px dashed #3950a8;border-radius:12px;padding:10px 14px;text-align:center;
+        color:#b4c2ff;background:#0e1630;cursor:pointer; flex: 1 1 320px}
+  .small{font-size:12px;color:var(--muted)}
+  textarea{width:100%;background:#0e1630;color:#e9eeff;border:1px solid #28336b;
+           border-radius:10px;padding:8px;margin-top:8px;white-space:pre}
+  .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:8px 0 16px}
+  .kpi-card{background:linear-gradient(180deg,#121a34,#0e1531);border:1px solid #29356c;border-radius:14px;padding:12px}
+  .kpi-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+  .kpi-name{font-weight:700;letter-spacing:.3px}
+  .kpi-pill{font-size:12px;border:1px solid #334086;border-radius:999px;padding:.1rem .5rem;color:#b7c5ff}
+  .kpi-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+  .kpi{background:#0f1733;border:1px solid #29356c;border-radius:12px;padding:8px}
+  .kpi .label{display:block;color:#9fb0ea;font-size:12px;margin-bottom:6px}
+  .kpi .value{font-weight:800;font-size:16px}
+  .kpi .sub{font-size:12px;color:#9fb0ea}
+
+  .table-shell{overflow:auto; max-height: 70vh; border-radius:10px; border:1px solid var(--grid); background:#10183a}
+  table{width:max-content; border-collapse:separate; border-spacing:0; table-layout:auto}
+  col.c-date{width:110px}
+  col.c-meeting{min-width:220px}
+  col.c-raceno{width:70px}
+  col.c-racename{min-width:520px}
+  col.c-actual{width:140px}
+  thead th{position:sticky;top:0;background:linear-gradient(180deg,#151d41,#131b3a);z-index:1}
+  th,td{padding:8px 10px;border-bottom:1px solid var(--grid);vertical-align:top;white-space:nowrap}
+  tr:hover td{background:rgba(255,255,255,.02)}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
+  .chip{display:inline-block;border-radius:999px;padding:.1rem .45rem;margin-right:3px;font-weight:700;font-size:12px}
+  .g{background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.4)}
+  .y{background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.45)}
+  .r{background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.45)}
+  .muted{color:var(--muted)}
+  @media (max-width: 1100px){ .kpis{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+<header>
+  <h1>Model Codebreaker Dashboard — up to 3 models</h1>
+  <p><span class="chip g">G</span>=correct horse and position, <span class="chip y">Y</span>=placed but wrong position, <span class="chip r">R</span>=miss. The first chip under each model is that model’s favourite.</p>
+</header>
+
+<div class="wrap">
+  <div class="controls">
+    <div id="drop" class="drop" tabindex="0">Drop <b>benchmark_gallops_*.csv</b> here or click</div>
+    <label><input type="checkbox" id="onlyBoth" checked> Only races where all shown models predicted</label>
+    <label><input type="checkbox" id="onlySignal"> Only rows with at least one G or Y</label>
+    <span id="fileStatus" class="small">No file loaded yet.</span>
+  </div>
+  <textarea id="paste" rows="5" class="mono" placeholder="…or paste CSV here and click Load"></textarea>
+  <div class="controls"><button id="loadBtn">Load</button></div>
+
+  <!-- KPI cards injected here -->
+  <div id="kpis" class="kpis" aria-live="polite"></div>
+
+  <div class="table-shell">
+    <table id="tbl">
+      <colgroup id="colgroup"></colgroup>
+      <thead><tr id="thead-row"></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+/* -------- CSV parser (quote-safe) -------- */
+function parseCSV(text){
+  const rows=[]; let i=0, cur="", inQ=false, row=[];
+  const cell=()=>{ row.push(cur); cur=""; };
+  const push=()=>{ if(row.length){ rows.push(row); row=[]; } };
+  while(i<text.length){
+    const c=text[i];
+    if(inQ){
+      if(c==='"' && text[i+1]==='"'){ cur+='"'; i+=2; continue; }
+      if(c==='"'){ inQ=false; i++; continue; }
+      cur+=c; i++; continue;
+    }else{
+      if(c==='"'){ inQ=true; i++; continue; }
+      if(c===','){ cell(); i++; continue; }
+      if(c==='\r'){ i++; continue; }
+      if(c==='\n'){ cell(); push(); i++; continue; }
+      cur+=c; i++; continue;
+    }
+  }
+  cell(); push();
+  if(!rows.length) return [];
+  const header = rows[0].map(h=>h.trim());
+  return rows.slice(1).filter(r=>r.some(x=>x && x.trim()!==""))
+    .map(r=>{ const o={}; header.forEach((h,idx)=>{ o[h]=r[idx]!==undefined? r[idx] : ""; }); return o; });
+}
+
+/* -------- Helpers -------- */
+const $ = s=>document.querySelector(s);
+const chip = c => `<span class="chip ${c==='G'?'g':c==='Y'?'y':'r'}">${c||'R'}</span>`;
+const toList = s => (s||"").split(",").map(x=>parseInt(x,10)).filter(n=>!isNaN(n));
+const normaliseKey = k => k.trim().replace(/\s+/g,"_").toLowerCase();
+
+/* -------- Data model -------- */
+let RACES = [];        // [{date, meet, race_no, name, actual:[...], models: {modelName:{pred:[], codes:[]}}}]
+let MODEL_ORDER = [];  // up to 3 names, in first-seen order
+
+function combineRows(rows){
+  const map={}; MODEL_ORDER = [];
+  rows.forEach(o=>{
+    const key = [o.date, o.meeting_number, o.race_number].join("|");
+    map[key] ||= {
+      date: o.date||"",
+      meet: o.meeting_venue||"",
+      race_no: o.race_number||"",
+      name: o.race_name||"",
+      actual: toList(o.actual_top3||""),
+      models: {}
+    };
+    const pack = {
+      pred: toList(o.pred_top3||""),
+      codes: [o.code_pos1||"", o.code_pos2||"", o.code_pos3||""]
+    };
+    const mname = (o.model||"").trim();
+    if(!mname) return;
+    if(!MODEL_ORDER.includes(mname)){
+      if(MODEL_ORDER.length < 3) MODEL_ORDER.push(mname);
+    }
+    map[key].models[mname] = pack;
+  });
+  return Object.values(map);
+}
+
+/* -------- KPIs -------- */
+function kpiForModel(modelName){
+  const rows = RACES.filter(r => r.models[modelName]);
+  const total = rows.length;
+  let favWin=0, favPlace=0, secPlace=0, thirdPlace=0;
+  rows.forEach(r=>{
+    const {codes} = r.models[modelName];
+    const c1 = (codes[0]||'').toUpperCase();
+    const c2 = (codes[1]||'').toUpperCase();
+    const c3 = (codes[2]||'').toUpperCase();
+    if(c1==='G') favWin++;
+    if(c1==='G' || c1==='Y') favPlace++;
+    if(c2==='G' || c2==='Y') secPlace++;
+    if(c3==='G' || c3==='Y') thirdPlace++;
+  });
+  function fmt(n){ return total? `${n} of ${total} (${(100*n/total).toFixed(1)}%)` : '0 of 0 (0.0%)'; }
+  return { total, favWin:fmt(favWin), favPlace:fmt(favPlace), secPlace:fmt(secPlace), thirdPlace:fmt(thirdPlace) };
+}
+
+function renderKPIs(){
+  const wrap = $('#kpis');
+  wrap.innerHTML = '';
+  MODEL_ORDER.forEach(name=>{
+    const m=kpiForModel(name);
+    const card = document.createElement('div');
+    card.className='kpi-card';
+    card.innerHTML = `
+      <div class="kpi-head">
+        <div class="kpi-name">${name}</div>
+        <div class="kpi-pill">Races analysed: ${m.total}</div>
+      </div>
+      <div class="kpi-grid">
+        <div class="kpi"><span class="label">Bet favourite to win</span><div class="value">${m.favWin}</div></div>
+        <div class="kpi"><span class="label">Bet favourite to place</span><div class="value">${m.favPlace}</div></div>
+        <div class="kpi"><span class="label">Bet second to place</span><div class="value">${m.secPlace}</div></div>
+        <div class="kpi"><span class="label">Bet third to place</span><div class="value">${m.thirdPlace}</div></div>
+      </div>`;
+    wrap.appendChild(card);
+  });
+}
+
+/* -------- Table rendering -------- */
+function rebuildTableHead(){
+  const colgroup = $('#colgroup');
+  const theadRow = $('#thead-row');
+  colgroup.innerHTML = '';
+  theadRow.innerHTML = '';
+
+  // fixed columns
+  const fixedCols = [
+    ['c-date','Date'], ['c-meeting','Meeting'], ['c-raceno','Race'], ['c-racename','Race name'], ['c-actual','Actual top-3']
+  ];
+  fixedCols.forEach(([cls,label])=>{
+    const c=document.createElement('col'); c.className=cls; colgroup.appendChild(c);
+    const th=document.createElement('th'); th.textContent=label; theadRow.appendChild(th);
+  });
+
+  // per-model columns
+  MODEL_ORDER.forEach(name=>{
+    const c1=document.createElement('col'); c1.style.minWidth='240px'; colgroup.appendChild(c1);
+    const c2=document.createElement('col'); c2.style.width='160px'; colgroup.appendChild(c2);
+    const th1=document.createElement('th'); th1.textContent=`${name} (fav | codes)`; theadRow.appendChild(th1);
+    const th2=document.createElement('th'); th2.textContent=`${name} picks`; theadRow.appendChild(th2);
+  });
+}
+
+function renderTable(){
+  const body = $("#tbl tbody");
+  body.innerHTML = "";
+  const onlyAll = $("#onlyBoth").checked;
+  const onlySignal = $("#onlySignal").checked;
+
+  RACES.forEach(r=>{
+    // Require predictions from all shown models if toggled
+    if(onlyAll){
+      for(const name of MODEL_ORDER){
+        const m=r.models[name];
+        if(!(m && m.pred && m.pred.length)) return; // skip row
+      }
+    }
+    // Signal filter
+    if(onlySignal){
+      const hasSig = MODEL_ORDER.some(name=>{
+        const m=r.models[name];
+        return m && (m.codes||[]).some(c=>c==='G'||c==='Y');
+      });
+      if(!hasSig) return;
+    }
+
+    const tr = document.createElement("tr");
+    const fixedCells = `
+      <td class="mono">${r.date||""}</td>
+      <td>${r.meet||""}</td>
+      <td class="mono">${r.race_no||""}</td>
+      <td>${r.name||""}</td>
+      <td class="mono">${(r.actual||[]).join(",")}</td>`;
+
+    let modelCells = '';
+    MODEL_ORDER.forEach(name=>{
+      const m=r.models[name]||{pred:[], codes:[]};
+      const fav = m.codes && m.codes.length? m.codes[0] : '';
+      const favChip = fav? chip(fav) : '<span class="muted">–</span>';
+      const codes = (m.codes||[]).length? m.codes.map(chip).join("") : '<span class="muted">–</span>';
+      const picks = (m.pred||[]).length? m.pred.join(",") : '–';
+      modelCells += `<td>${favChip} &nbsp;${codes}</td><td class="mono">${picks}</td>`;
+    });
+
+    tr.innerHTML = fixedCells + modelCells;
+    body.appendChild(tr);
+  });
+}
+
+function render(){
+  rebuildTableHead();
+  renderKPIs();
+  renderTable();
+}
+
+/* -------- Loaders -------- */
+function loadFromText(text){
+  const raw = parseCSV(text);
+  if(!raw.length){ $("#fileStatus").textContent="Could not parse CSV."; return; }
+  const rows = raw.map(o=>{
+    const n={}; for(const k in o){ n[normaliseKey(k)] = o[k]; }
+    return {
+      date:n.date||"",
+      meeting_number:n.meeting_number||n.meet_no||"",
+      meeting_venue:n.meeting_venue||n.venue||"",
+      race_number:n.race_number||n.race_no||"",
+      race_name:n.race_name||"",
+      actual_top3:n.actual_top3||"",
+      model:n.model||"",
+      pred_top3:n.pred_top3||"",
+      code_pos1:n.code_pos1||"",
+      code_pos2:n.code_pos2||"",
+      code_pos3:n.code_pos3||""
+    };
+  });
+  RACES = combineRows(rows);
+  $("#fileStatus").textContent = `Loaded ${rows.length} rows (${RACES.length} races). Showing ${MODEL_ORDER.length} model(s).`;
+  render();
+}
+
+/* -------- UI wiring -------- */
+const drop = $("#drop");
+const readFile = f=>{ const r=new FileReader(); r.onload=()=>loadFromText(r.result); r.readAsText(f); };
+
+drop.addEventListener("click", ()=>{
+  const inp=document.createElement("input");
+  inp.type="file"; inp.accept=".csv,text/csv";
+  inp.onchange = ()=>{ const f=inp.files[0]; if(f) readFile(f); };
+  inp.click();
+});
+drop.addEventListener("dragover", e=>{ e.preventDefault(); drop.style.filter="brightness(1.1)"; });
+drop.addEventListener("dragleave", ()=>{ drop.style.filter=""; });
+drop.addEventListener("drop", e=>{
+  e.preventDefault(); drop.style.filter="";
+  const f=e.dataTransfer.files[0]; if(f) readFile(f);
+});
+$("#loadBtn").addEventListener("click", ()=> loadFromText($("#paste").value));
+$("#onlyBoth").addEventListener("change", renderTable);
+$("#onlySignal").addEventListener("change", renderTable);
+</script>
+</body>
+</html>

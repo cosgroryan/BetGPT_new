@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Model Codebreaker Table (NN vs GBM)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root{ --bg:#0b1020; --panel:#121a34; --grid:#1f2a5a; --ink:#e9eeff; --muted:#8ea0d9;
+         --g:#10b981; --y:#f59e0b; --r:#ef4444; }
+  *{box-sizing:border-box}
+  body{margin:0;background:linear-gradient(180deg,#0a0f22,#0e1630);color:var(--ink);
+       font:14px/1.55 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial}
+  header{padding:20px 14px 0;text-align:center}
+  header h1{margin:0 0 6px;font-size:22px}
+  header p{margin:0 0 12px;color:var(--muted)}
+  .wrap{max-width:1600px;margin:12px auto 60px;padding:0 12px}
+  .controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
+  .drop{border:1.5px dashed #3950a8;border-radius:12px;padding:10px 14px;text-align:center;
+        color:#b4c2ff;background:#0e1630;cursor:pointer; flex: 1 1 320px}
+  .small{font-size:12px;color:var(--muted)}
+  textarea{width:100%;background:#0e1630;color:#e9eeff;border:1px solid #28336b;
+           border-radius:10px;padding:8px;margin-top:8px;white-space:pre}
+  .table-shell{overflow:auto; max-height: 70vh; border-radius:10px; border:1px solid var(--grid); background:#10183a}
+  table{width:max-content; border-collapse:separate; border-spacing:0; table-layout:auto}
+  col.c-date{width:110px}
+  col.c-meeting{min-width:220px}
+  col.c-raceno{width:70px}
+  col.c-racename{min-width:520px}
+  col.c-actual{width:140px}
+  col.c-nn-codes, col.c-gbm-codes{min-width:220px}
+  col.c-nn-picks, col.c-gbm-picks{width:150px}
+  thead th{position:sticky;top:0;background:linear-gradient(180deg,#151d41,#131b3a);z-index:1}
+  th,td{padding:8px 10px;border-bottom:1px solid var(--grid);vertical-align:top;white-space:nowrap}
+  tr:hover td{background:rgba(255,255,255,.02)}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
+  .chip{display:inline-block;border-radius:999px;padding:.1rem .45rem;margin-right:3px;font-weight:700;font-size:12px}
+  .g{background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.4)}
+  .y{background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.45)}
+  .r{background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.45)}
+  .muted{color:var(--muted)}
+</style>
+</head>
+<body>
+<header>
+  <h1>Model Codebreaker Table — NN vs GBM (Regression)</h1>
+  <p><span class="chip g">G</span>=correct horse & position, <span class="chip y">Y</span>=placed but wrong position, <span class="chip r">R</span>=miss. The <b>first chip</b> under each model is the model’s <b>favourite</b> (its 1st pick).</p>
+</header>
+
+<div class="wrap">
+  <div class="controls">
+    <div id="drop" class="drop" tabindex="0">Drop <b>benchmark_gallops_*.csv</b> here or click</div>
+    <label><input type="checkbox" id="onlyBoth" checked> Only races where both models predicted</label>
+    <label><input type="checkbox" id="onlySignal"> Only rows with at least one G or Y</label>
+    <span id="fileStatus" class="small">No file loaded yet.</span>
+  </div>
+  <textarea id="paste" rows="5" class="mono" placeholder="…or paste CSV here and click Load"></textarea>
+  <div class="controls"><button id="loadBtn">Load</button></div>
+
+  <div class="table-shell">
+    <table id="tbl">
+      <colgroup>
+        <col class="c-date"><col class="c-meeting"><col class="c-raceno"><col class="c-racename">
+        <col class="c-actual"><col class="c-nn-codes"><col class="c-nn-picks">
+        <col class="c-gbm-codes"><col class="c-gbm-picks">
+      </colgroup>
+      <thead>
+        <tr>
+          <th>Date</th><th>Meeting</th><th>Race</th><th>Race name</th><th>Actual top-3</th>
+          <th>NN (fav | codes)</th><th>NN picks</th>
+          <th>GBM (fav | codes)</th><th>GBM picks</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+/* -------- CSV parser (quote-safe) -------- */
+function parseCSV(text){
+  const rows=[]; let i=0, cur="", inQ=false, row=[];
+  const cell=()=>{ row.push(cur); cur=""; };
+  const push=()=>{ if(row.length){ rows.push(row); row=[]; } };
+  while(i<text.length){
+    const c=text[i];
+    if(inQ){
+      if(c==='"' && text[i+1]==='"'){ cur+='"'; i+=2; continue; }
+      if(c==='"'){ inQ=false; i++; continue; }
+      cur+=c; i++; continue;
+    }else{
+      if(c==='"'){ inQ=true; i++; continue; }
+      if(c===','){ cell(); i++; continue; }
+      if(c==='\r'){ i++; continue; }
+      if(c==='\n'){ cell(); push(); i++; continue; }
+      cur+=c; i++; continue;
+    }
+  }
+  cell(); push();
+  if(!rows.length) return [];
+  const header = rows[0].map(h=>h.trim());
+  return rows.slice(1).filter(r=>r.some(x=>x && x.trim()!=="")).map(r=>{
+    const o={}; header.forEach((h,idx)=>{ o[h]=r[idx]!==undefined? r[idx] : ""; }); return o;
+  });
+}
+
+/* -------- Helpers -------- */
+const $ = s=>document.querySelector(s);
+const chip = c => `<span class="chip ${c==='G'?'g':c==='Y'?'y':'r'}">${c||'R'}</span>`;
+const toList = s => (s||"").split(",").map(x=>parseInt(x,10)).filter(n=>!isNaN(n));
+
+function combineRows(rows){
+  const map={};
+  rows.forEach(o=>{
+    const key = [o.date, o.meeting_number, o.race_number].join("|");
+    const norm = k => (o[k]||o[k.toLowerCase()]||"").trim();
+    map[key] ||= {
+      date: norm("date"),
+      meet: norm("meeting_venue"),
+      race_no: norm("race_number"),
+      name: norm("race_name"),
+      actual: toList(norm("actual_top3")),
+      nn:null, gbm:null
+    };
+    const pack = {
+      pred: toList(norm("pred_top3")),
+      codes: [norm("code_pos1"), norm("code_pos2"), norm("code_pos3")]
+    };
+    const mname = norm("model").toLowerCase();
+    if(mname.includes("gbm")) map[key].gbm = pack; else map[key].nn = pack;
+  });
+  return Object.values(map);
+}
+
+/* -------- Rendering -------- */
+let RACES = [];
+function render(){
+  const body = $("#tbl tbody");
+  body.innerHTML = "";
+  const onlyBoth = $("#onlyBoth").checked;
+  const onlySignal = $("#onlySignal").checked;
+
+  RACES.forEach(r=>{
+    const nn = r.nn, gbm = r.gbm;
+    if(onlyBoth && !(nn && nn.pred.length && gbm && gbm.pred.length)) return;
+
+    const nnSig = nn && (nn.codes||[]).some(c=>c==='G'||c==='Y');
+    const gbmSig = gbm && (gbm.codes||[]).some(c=>c==='G'||c==='Y');
+    if(onlySignal && !(nnSig || gbmSig)) return;
+
+    const nnFav = nn ? (nn.codes[0]||'R') : '';
+    const gbmFav = gbm ? (gbm.codes[0]||'R') : '';
+    const nnCodes = nn ? nn.codes.map(chip).join("") : '<span class="muted">–</span>';
+    const gbmCodes = gbm ? gbm.codes.map(chip).join("") : '<span class="muted">–</span>';
+    const nnFavChip = nn ? chip(nnFav) : '<span class="muted">–</span>';
+    const gbmFavChip = gbm ? chip(gbmFav) : '<span class="muted">–</span>';
+    const nnPred = nn && nn.pred.length ? nn.pred.join(",") : '–';
+    const gbmPred = gbm && gbm.pred.length ? gbm.pred.join(",") : '–';
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td class="mono">${r.date||""}</td>
+      <td>${r.meet||""}</td>
+      <td class="mono">${r.race_no||""}</td>
+      <td>${r.name||""}</td>
+      <td class="mono">${(r.actual||[]).join(",")}</td>
+      <td>${nnFavChip} &nbsp;${nnCodes}</td>
+      <td class="mono">${nnPred}</td>
+      <td>${gbmFavChip} &nbsp;${gbmCodes}</td>
+      <td class="mono">${gbmPred}</td>
+    `;
+    body.appendChild(tr);
+  });
+}
+
+/* -------- Loaders -------- */
+function loadFromText(text){
+  const raw = parseCSV(text);
+  if(!raw.length){ $("#fileStatus").textContent="Could not parse CSV."; return; }
+  const rows = raw.map(o=>{
+    const n={}; for(const k in o){ n[k.trim().replace(/\s+/g,"_").toLowerCase()] = o[k]; }
+    return {
+      date:n.date||"",
+      meeting_number:n.meeting_number||n.meet_no||"",
+      meeting_venue:n.meeting_venue||n.venue||"",
+      race_number:n.race_number||n.race_no||"",
+      race_name:n.race_name||"",
+      actual_top3:n.actual_top3||"",
+      model:n.model||"",
+      pred_top3:n.pred_top3||"",
+      code_pos1:n.code_pos1||"",
+      code_pos2:n.code_pos2||"",
+      code_pos3:n.code_pos3||""
+    };
+  });
+  RACES = combineRows(rows);
+  $("#fileStatus").textContent = `Loaded ${rows.length} rows (${RACES.length} races).`;
+  render();
+}
+
+/* -------- UI wiring -------- */
+const $el = s=>document.querySelector(s);
+const drop = $("#drop");
+drop.addEventListener("click", ()=>{
+  const inp=document.createElement("input");
+  inp.type="file"; inp.accept=".csv,text/csv";
+  inp.onchange = ()=>{ const f=inp.files[0]; if(!f) return;
+    const r=new FileReader(); r.onload=()=>loadFromText(r.result); r.readAsText(f); };
+  inp.click();
+});
+drop.addEventListener("dragover", e=>{ e.preventDefault(); drop.style.filter="brightness(1.1)"; });
+drop.addEventListener("dragleave", ()=>{ drop.style.filter=""; });
+drop.addEventListener("drop", e=>{
+  e.preventDefault(); drop.style.filter="";
+  const f=e.dataTransfer.files[0]; if(!f) return;
+  const r=new FileReader(); r.onload=()=>loadFromText(r.result); r.readAsText(f);
+});
+$("#loadBtn").addEventListener("click", ()=> loadFromText($("#paste").value));
+$("#onlyBoth").addEventListener("change", render);
+$("#onlySignal").addEventListener("change", render);
+</script>
+</body>
+</html>

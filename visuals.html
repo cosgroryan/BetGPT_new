@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Racing Model Dashboard</title>
+<style>
+  :root{
+    --bg:#0b1020; --panel:#121a34; --muted:#7e8bb6; --ink:#e9eeff;
+    --accent:#6ee7b7; --accent2:#60a5fa; --warn:#fbbf24; --danger:#f87171;
+    --card:#101833; --chip:#1b2450;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:linear-gradient(180deg,#0a0f22, #0f1733);color:var(--ink);
+       font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial}
+  header{padding:28px 20px 8px; text-align:center}
+  header h1{margin:0 0 6px;font-size:28px}
+  header p{margin:0;color:var(--muted)}
+  .wrap{max-width:1100px;margin:24px auto;padding:0 16px 80px}
+  .grid{display:grid;gap:16px}
+  .g-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .g-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+  @media (max-width:900px){.g-2,.g-3{grid-template-columns:1fr}}
+
+  .card{background:var(--panel); border:1px solid #1c2552; border-radius:14px; padding:16px; box-shadow:0 10px 30px rgba(0,0,0,.25)}
+  .card h3{margin:2px 0 8px; font-size:18px}
+  .card p{margin:.25rem 0; color:var(--muted)}
+  .kpi{display:flex;align-items:baseline;gap:.6rem}
+  .kpi .big{font-size:28px;font-weight:700}
+  .kpi .tag{background:var(--chip); padding:.15rem .5rem; border-radius:999px; font-size:12px;color:#b9c6ff}
+  .row{display:flex;gap:10px;flex-wrap:wrap}
+  .chip{background:var(--chip); padding:.25rem .6rem;border-radius:999px;font-size:13px}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
+  .muted{color:var(--muted)}
+  .accent{color:var(--accent)}
+  .accent2{color:var(--accent2)}
+  .small{font-size:13px}
+  .divider{height:1px;background:#1e2757;margin:12px -16px}
+  button,input,select{font:inherit;color:var(--ink)}
+  input[type="number"], input[type="text"]{background:#0e1630;border:1px solid #26306a;border-radius:10px;padding:.6rem .7rem; width:100%}
+  input[type="range"]{width:100%}
+  button{background:linear-gradient(180deg,#1b2a6a,#14307e);border:1px solid #3452b0;border-radius:12px;padding:.6rem .9rem;cursor:pointer}
+  button:hover{filter:brightness(1.1)}
+  .drop{border:1.5px dashed #3950a8;border-radius:14px;padding:16px;text-align:center;color:#b4c2ff;background:#0e1630}
+  .ok{color:var(--accent)} .warn{color:var(--warn)} .bad{color:var(--danger)}
+  .foot{margin-top:6px; color:#9fb1ff; font-size:12px}
+  .code{background:#0f1735;border:1px solid #243074;border-radius:10px;padding:10px;font-size:13px;white-space:pre-wrap}
+  canvas{width:100%;height:180px;background:#0f1530;border-radius:12px;border:1px solid #25306a}
+  .list li{margin:.2rem 0}
+</style>
+</head>
+<body>
+<header>
+  <h1>Racing Model Dashboard</h1>
+  <p>Feed-forward PyTorch model for <span class="accent">finish rank prediction</span> with categorical embeddings and PL sampling for race probabilities.</p>
+</header>
+
+<div class="wrap grid g-2">
+
+  <!-- LEFT: Overview + Metrics -->
+  <section class="card">
+    <h3>Model Overview</h3>
+    <p>This model predicts a continuous <span class="chip">finish_rank</span> (lower is better). We then turn scores into per-race probabilities using a Plackett–Luce (PL) sampling layer with temperature <span class="chip mono">τ = 0.4</span> and optionally blend with market odds using a <span class="chip">logit blend</span> (weight <span class="mono">α</span>).</p>
+    <div class="divider"></div>
+    <div class="grid g-3">
+      <div>
+        <div class="kpi"><div class="big" id="kpi-spear">0.843</div><div class="tag">Test Spearman ρ</div></div>
+        <p class="small">Higher is better (1.0 = perfect rank correlation).</p>
+      </div>
+      <div>
+        <div class="kpi"><div class="big" id="kpi-mae">1.321</div><div class="tag">Test MAE</div></div>
+        <p class="small">Mean absolute error in finishing positions.</p>
+      </div>
+      <div>
+        <div class="kpi"><div class="big" id="kpi-rmse">1.859</div><div class="tag">Test RMSE</div></div>
+        <p class="small">Root MSE in finishing positions.</p>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <div>
+      <canvas id="chart"></canvas>
+      <p class="foot">Bars show validation vs test metrics from <span class="mono">metrics.json</span>. Drop a new file to update.</p>
+    </div>
+  </section>
+
+  <!-- RIGHT: Load Metrics + Odds/Blend -->
+  <section class="card">
+    <h3>Update Metrics</h3>
+    <p>Drag & drop <span class="mono">metrics.json</span> here, or click to choose. We’ll read <span class="mono">val_spearman, test_mae, test_rmse, test_spearman</span>.</p>
+    <div id="drop" class="drop" tabindex="0">Drop <b>metrics.json</b> here or click</div>
+    <p class="small foot" id="fileStatus">Using sample metrics bundled in this page.</p>
+
+    <div class="divider"></div>
+    <h3>Win% → NZ Decimal Odds</h3>
+    <div class="grid g-3">
+      <div>
+        <label class="small">Model Win %</label>
+        <input id="winPct" type="number" min="0" max="100" step="0.1" value="25" />
+      </div>
+      <div>
+        <label class="small">Fair Odds (no margin)</label>
+        <input id="fairOdds" type="text" class="mono" readonly />
+      </div>
+      <div>
+        <label class="small">Top-3 % (illustrative<sup>*</sup>)</label>
+        <input id="top3Pct" type="text" class="mono" readonly />
+      </div>
+    </div>
+    <p class="small muted">* Top-3 shown as a simple multiple of win% for illustration. In production we use PL sampling over the whole field.</p>
+
+    <div class="divider"></div>
+    <h3>Blend with Market</h3>
+    <p class="small">Enter market odds for the same runner and choose <span class="mono">α</span> (0 = trust market, 1 = trust model). We blend in logit space and renormalise.</p>
+    <div class="grid g-3">
+      <div>
+        <label class="small">Market Odds (NZ decimal)</label>
+        <input id="mktOdds" type="number" min="1.01" step="0.01" value="3.40" />
+      </div>
+      <div>
+        <label class="small">Blend α</label>
+        <input id="alpha" type="range" min="0" max="1" step="0.01" value="0.60" />
+        <div class="small mono" id="alphaLbl">α = 0.60</div>
+      </div>
+      <div>
+        <label class="small">Blended Win % / Fair Odds</label>
+        <input id="blendOut" type="text" class="mono" readonly />
+      </div>
+    </div>
+  </section>
+
+  <!-- FULL-WIDTH: Features & Pipeline -->
+  <section class="card" style="grid-column:1 / -1">
+    <h3>What features does the model use?</h3>
+    <p>The network ingests normalised numeric features and <b>embeddings</b> for high-cardinality categoricals (e.g. runner and jockey). Below are the defaults used by training (you can tweak as your pipeline evolves).</p>
+    <div class="grid g-3">
+      <div>
+        <h4>Numeric</h4>
+        <ul class="list small">
+          <li>meeting_number, race_number</li>
+          <li>race_distance_m, stake</li>
+          <li>fav_rank, race_length, race_number_sched</li>
+          <li>entrant_weight</li>
+          <li>horse_starts_prior, win_rate_prior, top3_rate_prior</li>
+          <li>avg_finish_prior, last_finish</li>
+          <li>avg_fav_rank_prior, avg_margin_prior</li>
+          <li>days_since_last_run</li>
+        </ul>
+      </div>
+      <div>
+        <h4>Categorical (embedded)</h4>
+        <ul class="list small">
+          <li>race_class, race_track, race_weather</li>
+          <li>meeting_country, meeting_venue, source_section</li>
+          <li>race_class_sched, entrant_barrier</li>
+          <li>entrant_jockey, <b>runner_name</b></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Why Spearman ρ?</h4>
+        <p class="small">We optimise MSE on <span class="mono">finish_rank</span>, but judge ordering by <b>Spearman rank correlation</b> (monotonic). A higher ρ means the model’s ordering of runners is closer to reality.</p>
+        <p class="small">Typical validation: ρ≈0.847; test: ρ≈0.843.</p>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <h3>How predictions become probabilities</h3>
+    <ol class="small">
+      <li><b>Scores</b>: The network outputs a score (expected finish rank). Lower = better.</li>
+      <li><b>Race-wise normalisation</b>: Convert scores to positive “skill” via softmax temperature <span class="mono">τ=0.4</span>.</li>
+      <li><b>Plackett–Luce (PL)</b>: Sample full finishing orders to get <i>win</i>, <i>top-3</i>, etc. probabilities per horse.</li>
+      <li><b>Blend</b>: Optionally blend with market implied probabilities using a logit blend with weight <span class="mono">α</span>.</li>
+      <li><b>Odds</b>: Convert probabilities to <b>NZ decimal</b> fair odds: <span class="mono">odds = 1 / p</span> (no margin).</li>
+    </ol>
+    <div class="code small">Tip: In the CLI, use <span class="mono">--tau 0.4 --alpha 0.6</span> for a sharp favourite and a sensible model/market balance.</div>
+  </section>
+
+  <!-- FULL-WIDTH: Repro & About -->
+  <section class="card" style="grid-column:1 / -1">
+    <h3>Repro + Files</h3>
+    <div class="grid g-3">
+      <div>
+        <p class="small"><b>Artifacts</b></p>
+        <ul class="list small">
+          <li><span class="mono">model_regression.pth</span> — PyTorch weights</li>
+          <li><span class="mono">preprocess.pkl</span> — feature lists, encoders</li>
+          <li><span class="mono">metrics.json</span> — summary metrics</li>
+        </ul>
+      </div>
+      <div>
+        <p class="small"><b>Training split</b></p>
+        <p class="small">Chronological 70/15/15. Rows with <span class="mono">is_scratched</span> or non-complete status are filtered; labels require <span class="mono">finish_rank ≥ 1</span>.</p>
+      </div>
+      <div>
+        <p class="small"><b>Confidence</b></p>
+        <p class="small">Win% bands use a simple binomial CI from PL sampling (e.g., 90% CI); narrower bands ⇒ higher confidence.</p>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+/* ------- Sample metrics (used until you drop a file) ------- */
+let metrics = {
+  "val_spearman": 0.8469185866303666,
+  "test_mae": 1.3208822011947632,
+  "test_rmse": 1.859128663230195,
+  "test_spearman": 0.8431149786143137
+};
+
+/* ------- UI helpers ------- */
+const $ = sel => document.querySelector(sel);
+const fmt = (x, d=3) => (typeof x === "number" && isFinite(x)) ? x.toFixed(d) : "–";
+
+function updateKPIs(){
+  $("#kpi-spear").textContent = fmt(metrics.test_spearman, 3);
+  $("#kpi-mae").textContent   = fmt(metrics.test_mae, 3);
+  $("#kpi-rmse").textContent  = fmt(metrics.test_rmse, 3);
+  drawChart();
+}
+
+/* ------- Simple canvas bar chart (no deps) ------- */
+function drawChart(){
+  const c = $("#chart");
+  const ctx = c.getContext("2d");
+  const w = c.width = c.clientWidth * window.devicePixelRatio;
+  const h = c.height = c.clientHeight * window.devicePixelRatio;
+  ctx.clearRect(0,0,w,h);
+
+  // Bars: val spearman vs test spearman, test mae, test rmse
+  const items = [
+    {label:"Val ρ", value: metrics.val_spearman ?? 0, color:"#60a5fa"},
+    {label:"Test ρ", value: metrics.test_spearman ?? 0, color:"#6ee7b7"},
+    {label:"Test MAE", value: metrics.test_mae ? (1/metrics.test_mae) : 0, color:"#fbbf24", invert:true},
+    {label:"Test RMSE", value: metrics.test_rmse ? (1/metrics.test_rmse) : 0, color:"#f87171", invert:true}
+  ];
+  // Scale to max
+  const maxv = Math.max(...items.map(i => i.value));
+  const pad = 40, barW = (w - pad*2) / items.length * 0.6, gap = (w - pad*2) / items.length;
+  ctx.font = (14*window.devicePixelRatio)+"px system-ui";
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+
+  items.forEach((it, i) => {
+    const x = pad + i*gap + (gap-barW)/2;
+    const bh = (it.value / (maxv || 1)) * (h - 80);
+    const y = h - 40 - bh;
+    // bar
+    ctx.fillStyle = it.color;
+    ctx.fillRect(x, y, barW, bh);
+    // label
+    ctx.fillStyle = "#b9c6ff";
+    ctx.fillText(it.label, x + barW/2, h - 20);
+    // value
+    const vtxt = it.invert ? (it.label.includes("RMSE")||it.label.includes("MAE") ? fmt((1/it.value),3):fmt(it.value,3)) : fmt(it.value,3);
+    ctx.fillText(vtxt, x + barW/2, y - 12);
+  });
+}
+
+/* ------- Dropzone for metrics.json ------- */
+const drop = $("#drop");
+drop.addEventListener("click", () => {
+  const inp = document.createElement("input");
+  inp.type = "file"; inp.accept = "application/json";
+  inp.onchange = () => readMetricsFile(inp.files[0]);
+  inp.click();
+});
+drop.addEventListener("dragover", e => { e.preventDefault(); drop.style.filter="brightness(1.1)"; });
+drop.addEventListener("dragleave", e => { drop.style.filter=""; });
+drop.addEventListener("drop", e => {
+  e.preventDefault(); drop.style.filter="";
+  const f = e.dataTransfer.files[0];
+  readMetricsFile(f);
+});
+
+function readMetricsFile(file){
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try{
+      const obj = JSON.parse(reader.result);
+      const wanted = ["val_spearman","test_mae","test_rmse","test_spearman"];
+      const ok = wanted.every(k => k in obj);
+      if(!ok){ throw new Error("Missing keys in metrics.json"); }
+      metrics = obj;
+      $("#fileStatus").textContent = `Loaded ${file.name}`;
+      updateKPIs();
+    }catch(err){
+      $("#fileStatus").textContent = `Could not parse ${file.name}: ${err.message}`;
+    }
+  };
+  reader.readAsText(file);
+}
+
+/* ------- Odds + Blending tools ------- */
+function oddsFromProb(p){ return p>0 ? (1/p) : Infinity; }
+function probFromOdds(o){ return o>0 ? (1/o) : 0; }
+function logit(p){ p=Math.min(Math.max(p,1e-9),1-1e-9); return Math.log(p/(1-p)); }
+function invLogit(z){ return 1/(1+Math.exp(-z)); }
+
+function refreshOdds(){
+  const winPct = parseFloat($("#winPct").value || "0");
+  const p = Math.max(0, Math.min(1, winPct / 100));
+  $("#fairOdds").value = oddsFromProb(p).toFixed(2);
+  // illustrative top-3: 2.5× win prob capped at 95% (real app uses PL sampling)
+  const top3 = Math.min(0.95, p*2.5);
+  $("#top3Pct").value = (top3*100).toFixed(1) + " %";
+
+  // Blend with market
+  const mOdds = parseFloat($("#mktOdds").value || "0");
+  const pm = probFromOdds(mOdds);
+  const alpha = parseFloat($("#alpha").value || "0.6");
+  $("#alphaLbl").textContent = `α = ${alpha.toFixed(2)}`;
+  const z = alpha*logit(p) + (1-alpha)*logit(pm);
+  const pb = invLogit(z);
+  $("#blendOut").value = `${(pb*100).toFixed(2)} %  /  $${oddsFromProb(pb).toFixed(2)}`;
+}
+["winPct","mktOdds","alpha"].forEach(id => {
+  document.getElementById(id).addEventListener("input", refreshOdds);
+});
+
+/* ------- Init ------- */
+updateKPIs();
+refreshOdds();
+window.addEventListener("resize", drawChart);
+</script>
+</body>
+</html>
