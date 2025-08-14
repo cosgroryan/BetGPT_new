@@ -29,6 +29,11 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
+from model_features import build_model_features_df
+from pytorch_pre import load_model_and_predict
+import pandas as pd
+from pytorch_pre import estimate_position_probs_for_race as estimate_model_probs
+
 
 NZ = ZoneInfo("Pacific/Auckland")
 
@@ -151,6 +156,28 @@ def fetch_tab_odds(session, date_str, meetno, raceno):
         build_market("PLACE", "ffplc", "plc"),
     ]
     return markets
+
+def build_race_df_for_model(event_payload) -> pd.DataFrame:
+    """
+    Build a minimal DataFrame the model can consume.
+    We include: runner_name, runner_number, meeting_venue, race_number.
+    Extra cols are harmless; the model loader will ignore unknowns.
+    """
+    data = event_payload.get("data") or {}
+    race = data.get("race") or {}
+    venue = race.get("display_meeting_name") or race.get("meeting_name") or ""
+    rnum  = race.get("race_number")
+
+    rows = []
+    for r in extract_runners(event_payload):
+        rows.append({
+            "runner_name": r.get("name") or "",
+            "runner_number": r.get("no"),
+            "meeting_venue": venue,
+            "race_number": rnum,
+        })
+    return pd.DataFrame(rows)
+
 
 def extract_prices_from_markets(markets):
     """
@@ -310,6 +337,21 @@ def last_fluc(r):
 
 def fmt_price(x):
     return "—" if x in (None, 0, 0.0) else (f"{float(x):g}" if isinstance(x, (int,float)) else str(x))
+
+# ---- Unpickle shim for artifacts saved with __main__.PreprocessArtifacts ----
+try:
+    from pytorch_pre import PreprocessArtifacts as _PreprocessArtifacts  # your real class
+    # Expose it under __main__ so pickles referencing __main__.PreprocessArtifacts resolve
+    import sys as _sys
+    _sys.modules.get("__main__", globals())  # ensure module exists
+    globals()["PreprocessArtifacts"] = _PreprocessArtifacts
+except Exception:
+    # If pytorch_pre doesn’t export PreprocessArtifacts, we provide a lenient stub so
+    # pickled state can still attach attributes during load. Prefer real class if available.
+    class PreprocessArtifacts:  # noqa: N801 (keep name exact for pickle)
+        def __init__(self, *args, **kwargs):
+            pass
+
 
 import time
 
@@ -795,7 +837,6 @@ class JsonViewer(tk.Toplevel):
 
 
 
-
 # ---------- Race Viewer ----------
 class RaceViewer(tk.Toplevel):
     def __init__(self, parent, payload, title="Race"):
@@ -817,16 +858,19 @@ class RaceViewer(tk.Toplevel):
         for r in self.runners:
             r["metrics"] = compute_runner_metrics(r, race_cond)
 
-        # Header
+        # compute Model% once (NaN-proof; falls back to market or equal split)
+        self._compute_model_probs(silent=True)
+
+        # ----- Header
         hdr = ttk.Frame(self, padding=10)
         hdr.pack(fill="x")
 
         head_title = f"{self.race.get('display_meeting_name') or self.race.get('meeting_name') or ''} — " \
                      f"R{self.race.get('race_number','?')}: {self.race.get('description','')}"
         ttk.Label(hdr, text=head_title, font=("TkDefaultFont", 12, "bold")).pack(anchor="w")
-        
+
         # NZ-local start time
-        start_utc = parse_start_to_utc(self.race) 
+        start_utc = parse_start_to_utc(self.race)
         start_str = fmt_dt_nz(start_utc)
 
         meta_line = " | ".join([
@@ -842,18 +886,19 @@ class RaceViewer(tk.Toplevel):
         chips = ttk.Frame(hdr)
         chips.pack(fill="x", pady=(6, 0))
         if fav.get("name"):
-            ttk.Label(chips, text=f"Favourite: {fav.get('name')}  (#{fav.get('runner_number','?')}  "
-                                  f"FW {fmt_price((fav.get('odds') or {}).get('fixed_win'))}, "
-                                  f"FP {fmt_price((fav.get('odds') or {}).get('fixed_place'))})",
-                      foreground="#0a7").pack(side="left")
+            ttk.Label(
+                chips,
+                text=f"Favourite: {fav.get('name')}  (#{fav.get('runner_number','?')}  "
+                     f"FW {fmt_price((fav.get('odds') or {}).get('fixed_win'))}, "
+                     f"FP {fmt_price((fav.get('odds') or {}).get('fixed_place'))})",
+                foreground="#0a7"
+            ).pack(side="left")
         if mover.get("name"):
-            ttk.Label(chips, text=f"  Mover: {mover.get('name')}",
-                      foreground="#a70").pack(side="left")
+            ttk.Label(chips, text=f"  Mover: {mover.get('name')}", foreground="#a70").pack(side="left")
         ttk.Button(chips, text="Refresh odds", command=self.refresh_odds).pack(side="right")
         ttk.Button(chips, text="Check results", command=self.check_results).pack(side="right", padx=(8, 0))
-        # ... after the `chips` frame (right before you build the tables) add:
 
-        # Top toolbar (always visible)
+        # ----- Top toolbar
         toolbar = ttk.Frame(self, padding=(10, 6, 10, 6))
         toolbar.pack(fill="x")
         ttk.Button(toolbar, text="Raw JSON", command=self.show_raw).pack(side="left")
@@ -861,21 +906,19 @@ class RaceViewer(tk.Toplevel):
         ttk.Button(toolbar, text="Check results", command=self.check_results).pack(side="left", padx=(8, 0))
         ttk.Button(toolbar, text="Close", command=self.destroy).pack(side="right")
 
-        # Handy hotkeys (Ctrl+S on Windows/Linux, Cmd+S on macOS)
+        # Hotkeys
         self.bind_all("<Control-s>", lambda e: self.save_json())
         self.bind_all("<Command-s>", lambda e: self.save_json())
 
-        # Top runners table
+        # ----- Top runners table
         table_frame = ttk.Frame(self, padding=(10, 6, 10, 6))
         table_frame.pack(fill="both", expand=True)
 
         cols = ("no","name","barrier","jockey","weight","win_fx","pl_fx","win_tote","pl_tote","flucs","last20","edge")
         self.tree = ttk.Treeview(table_frame, columns=cols, show="headings", selectmode="extended", height=12)
         headers = ["#","Runner","Barrier","Jockey","Wgt","WIFx","PIFx","WITote","PITote","Flucs","Form","Edge"]
-
         for c, h in zip(cols, headers):
             self.tree.heading(c, text=h)
-
         self.tree.column("no", width=50, anchor="center")
         self.tree.column("name", width=280, anchor="w")
         self.tree.column("barrier", width=70, anchor="center")
@@ -894,18 +937,14 @@ class RaceViewer(tk.Toplevel):
         self.tree.pack(side="left", fill="both", expand=True)
         vsb.pack(side="right", fill="y")
 
-        # tag for condition edge highlight
-        self.tree.tag_configure("edge_row", background="#eaf7ea")
-        # tag colours for 1-2-3
-        self.tree.tag_configure("winner", background="#ffe680")   # gold-ish
-        self.tree.tag_configure("second", background="#e0e0e0")   # silver
-        self.tree.tag_configure("third",  background="#f7c6a3")   # bronze
+        # tags for results
+        self.tree.tag_configure("winner", background="#ffe680")
+        self.tree.tag_configure("second", background="#e0e0e0")
+        self.tree.tag_configure("third",  background="#f7c6a3")
 
-        # clear any existing rows before refilling
         self.tree.delete(*self.tree.get_children())
-
         for r in self.runners:
-            m = compute_runner_metrics(r)
+            m = r["metrics"]
             self.tree.insert(
                 "",
                 "end",
@@ -921,31 +960,30 @@ class RaceViewer(tk.Toplevel):
                     fmt_price(r.get("win_tote")),
                     fmt_price(r.get("place_tote")),
                     r.get("flucs_disp") or "",
-                    (r.get("form") or "")[:24],   # <<— your form guide (last_twenty_starts)
-                    m.get("edge") or "",          # short “edge” tags
+                    (r.get("form") or "")[:24],
+                    m.get("edge") or "",
                 ),
             )
 
-        # ----- Notebook: Signals / Staking / Notes -----
+        # ----- Notebook: Signals / Staking / Notes
         nb = ttk.Notebook(self)
-        # IMPORTANT: make the notebook the top filler
         nb.pack(side="top", fill="both", expand=True, padx=10, pady=(0, 10))
-
-
 
         # Signals tab
         sig_frame = ttk.Frame(nb, padding=10)
         nb.add(sig_frame, text="Signals")
 
-        sig_cols = ("no","name","winfx","wintote","imp","firm","ewov","kelly","pace","edge")
+        sig_cols = ("no","name","winfx","wintote","model","imp","firm","ewov","kelly","pace","edge")
         self.sig_tree = ttk.Treeview(sig_frame, columns=sig_cols, show="headings", height=10)
-        for cid, label in zip(sig_cols, ["#","Runner","WinFx","WinTote","Imp%","Firm%","EWov%","Kelly%","Pace","Edge"]):
+        for cid, label in zip(
+            sig_cols,
+            ["#","Runner","WinFx","WinTote","Model%","Imp%","Firm%","EWov%","Kelly%","Pace","Edge"]
+        ):
             self.sig_tree.heading(cid, text=label)
-
         for cid, w, anchor in [
             ("no",60,"center"),("name",260,"w"),("winfx",80,"center"),("wintote",80,"center"),
-            ("imp",80,"center"),("firm",80,"center"),("ewov",80,"center"),("kelly",80,"center"),
-            ("pace",120,"w"),("edge",160,"w")
+            ("model",80,"center"),("imp",80,"center"),("firm",80,"center"),
+            ("ewov",80,"center"),("kelly",80,"center"),("pace",120,"w"),("edge",160,"w")
         ]:
             self.sig_tree.column(cid, width=w, anchor=anchor)
 
@@ -954,28 +992,30 @@ class RaceViewer(tk.Toplevel):
         self.sig_tree.pack(side="left", fill="both", expand=True)
         sig_vsb.pack(side="right", fill="y")
 
-# Fill Signals grid (use precomputed metrics stored on each runner)
+        # Fill Signals grid (metrics + Model%)
+        self.sig_tree.delete(*self.sig_tree.get_children())
         for r in self.runners:
             m = r["metrics"]
+            no_i = r.get("no")
+            model_p = self.model_winp_by_no.get(int(no_i)) if no_i is not None else None
             self.sig_tree.insert(
                 "",
                 "end",
-                iid=f"r{r.get('no')}",  
+                iid=f"r{no_i}",
                 values=(
-                    r.get("no") or "",
+                    no_i or "",
                     r.get("name") or "",
                     fmt_price(m.get("win_fx")),
                     fmt_price(m.get("win_tote")),
-                    pct(m.get("imp_win")),         # implied win % from WinFx
-                    pct(m.get("firming_pct")),     # price firming %
-                    pct(m.get("ew_overlay_pct")),  # each-way overlay %
-                    pct(m.get("kelly_pct1x")),     # Kelly (1x) fraction %
+                    ("" if model_p is None else f"{model_p*100:.1f}"),
+                    pct(m.get("imp_win")),
+                    pct(m.get("firming_pct")),
+                    pct(m.get("ew_overlay_pct")),
+                    pct(m.get("kelly_pct1x")),
                     m.get("pace") or "",
                     m.get("edge") or "",
                 ),
             )
-
-
 
         # Staking tab
         stk_frame = ttk.Frame(nb, padding=10)
@@ -997,13 +1037,12 @@ class RaceViewer(tk.Toplevel):
         ttk.Entry(ctrl, textvariable=self.target_profit_var, width=8).grid(row=0, column=5, sticky="w", padx=(4,12))
 
         self.require_kelly_pos = tk.BooleanVar(value=True)
-        self.max_odds_var = tk.StringVar(value="12")  # cap at 12.0 by default
+        self.max_odds_var = tk.StringVar(value="12")  # cap at 12.0
 
         ttk.Checkbutton(ctrl, text="Only pick value (Kelly>0)", variable=self.require_kelly_pos)\
             .grid(row=0, column=7, sticky="w", padx=(12,0))
         ttk.Label(ctrl, text="Max WinFx").grid(row=0, column=8, sticky="w", padx=(12,0))
         ttk.Entry(ctrl, textvariable=self.max_odds_var, width=6).grid(row=0, column=9, sticky="w")
-
 
         self.use_tote_as_fair = tk.BooleanVar(value=True)
         ttk.Checkbutton(ctrl, text="Kelly uses WinTote as fair (fallback WinFx)", variable=self.use_tote_as_fair)\
@@ -1027,7 +1066,6 @@ class RaceViewer(tk.Toplevel):
             ("stake",90,"center")
         ]:
             self.picks_tree.column(cid, width=w, anchor=anchor)
-
         self.picks_tree.pack(fill="x", padx=0, pady=(0,8))
 
         self.plan_text = ScrolledText(stk_frame, height=10, wrap="word")
@@ -1040,121 +1078,18 @@ class RaceViewer(tk.Toplevel):
         if race_comment:
             notes.insert("1.0", race_comment + "\n")
 
-        """        
-        # Bottom buttons (pin to bottom so they’re always visible)
-        btns = ttk.Frame(self, padding=10)
-        btns.pack(side="bottom", fill="x")   # <-- was just pack(fill="x")
+    # ===== Staking helpers =====
 
-        ttk.Button(btns, text="Raw JSON", command=self.show_raw).pack(side="left")
-        ttk.Button(btns, text="Save JSON", command=self.save_json).pack(side="left", padx=(8, 0))
-        ttk.Button(btns, text="Close", command=self.destroy).pack(side="right")
-        """
-
-    # ----- Staking helpers -----
     def _val_or_none(self, s):
         s = (s or "").strip()
         if s in {"", "—", "-"}:
             return None
-        return safe_float(s)
-    
-    def _results_url_parts(self):
-        """Build (date_str, meetno, raceno) for the results endpoint."""
-        # Race date: prefer NZ date from the event; else GUI date field
-        date_str = (self.race.get("race_date_nz") or "").strip()
-        if not date_str:
-            date_str = (self.parent.date_var.get() or "").strip()
-
-        # Meeting number (TAB tote meeting number) from parent’s current meeting
-        meetno = self.parent.current_meetno()
-        # Race number from the event
-        raceno = safe_int(self.race.get("race_number"))
-
-        return date_str, meetno, raceno
-
-    def _fetch_results_json(self):
-        date_str, meetno, raceno = self._results_url_parts()
-        if not (date_str and meetno and raceno):
-            raise ValueError("Missing date/meet#/race# to fetch results.")
-
-        url = f"{RESULTS_BASE}/{date_str}/{meetno}/{raceno}"
-        r = self.parent.session.get(url, timeout=TIMEOUT)
-        r.raise_for_status()
-        return r.json()
-
-    def _extract_placings_map(self, res_json):
-        """
-        Return dict {1: runner_no, 2: runner_no, 3: runner_no}.
-        Handles the typical results shape.
-        """
         try:
-            mtgs = res_json.get("meetings") or []
-            races = mtgs[0].get("races") or []
-            placings = races[0].get("placings") or []
+            return float(s)
         except Exception:
-            placings = []
-
-        places = {}
-        for p in placings:
-            rank = safe_int(p.get("rank"))
-            num = safe_int(p.get("number"))
-            if rank in (1, 2, 3) and num:
-                places[rank] = num
-        return places
-
-    def _clear_result_tags(self):
-        for iid in self.tree.get_children(""):
-            # keep existing non-result tags if you use them; here we clear all result tags
-            current = set(self.tree.item(iid, "tags"))
-            current.difference_update({"winner", "second", "third"})
-            self.tree.item(iid, tags=tuple(current))
-
-    def _apply_result_tags(self, places):
-        """Apply gold/silver/bronze to the matching runner rows."""
-        # Build a quick map from runner number -> iid if you didn’t set iids
-        def iid_for_runner(num):
-            iid = f"r{num}"
-            if iid in self.tree.get_children(""):
-                return iid
-            # fallback scan by value (in case ids differ)
-            for it in self.tree.get_children(""):
-                if safe_int(self.tree.set(it, "no")) == num:
-                    return it
             return None
 
-        self._clear_result_tags()
-
-        for rank, tag in [(1, "winner"), (2, "second"), (3, "third")]:
-            num = places.get(rank)
-            if not num:
-                continue
-            iid = iid_for_runner(num)
-            if not iid:
-                continue
-            current = set(self.tree.item(iid, "tags"))
-            current.add(tag)
-            self.tree.item(iid, tags=tuple(current))
-            # Optionally scroll into view for the winner
-            if rank == 1:
-                self.tree.see(iid)
-
-    def check_results(self):
-        """Button handler: fetch results and highlight 1-2-3."""
-        try:
-            res = self._fetch_results_json()
-            places = self._extract_placings_map(res)
-            if not places:
-                messagebox.showinfo("Results", "No placings found yet for this race.")
-                return
-            self._apply_result_tags(places)
-            messagebox.showinfo(
-                "Results",
-                "Placings loaded.\n"
-                f"1st: #{places.get(1, '?')}   2nd: #{places.get(2, '?')}   3rd: #{places.get(3, '?')}"
-            )
-        except Exception as e:
-            messagebox.showerror("Results error", f"Could not fetch/apply results:\n{e}")
-
-
+    # ----- Picks loading
     def load_selected_picks(self):
         sel = self.tree.selection()
         if not sel:
@@ -1168,8 +1103,15 @@ class RaceViewer(tk.Toplevel):
             name = self.tree.set(iid, "name")
             winfx = self._val_or_none(self.tree.set(iid, "win_fx"))
             wintt = self._val_or_none(self.tree.set(iid, "win_tote"))
-            self.picks_tree.insert("", "end", values=(num, name, fmt_price(winfx), fmt_price(wintt), "", "", "", "", ""))
+            self.picks_tree.insert(
+                "", "end",
+                values=(num, name,
+                        ("" if winfx is None else f"{winfx:g}"),
+                        ("" if wintt is None else f"{wintt:g}"),
+                        "", "", "", "", "")
+            )
 
+    # ----- Recommend picks (kept from your working version)
     def recommend_picks(self):
         max_odds = safe_float(self.max_odds_var.get(), None)
         must_be_value = self.require_kelly_pos.get()
@@ -1185,12 +1127,19 @@ class RaceViewer(tk.Toplevel):
             if must_be_value and (m.get("kelly_pct1x") or 0) <= 0:
                 continue
 
-            # score: overlay first, then firming (more negative is better), tiny bonus for edge tags
             overlay = m.get("ew_overlay_pct") or 0.0
             firm = m.get("firming_pct")
             firm_adj = 0.0 if firm is None else -firm
             edge_bonus = 0.05 if m.get("edge") else 0.0
-            score = overlay * 2.0 + firm_adj * 0.2 + edge_bonus
+
+            # small bonus for higher model probability if available
+            model_bonus = 0.0
+            no_i = safe_int(r.get("no"))
+            if no_i and hasattr(self, "model_winp_by_no"):
+                mp = self.model_winp_by_no.get(no_i, 0.0)
+                model_bonus = mp * 0.5  # gentle nudge
+
+            score = overlay * 2.0 + firm_adj * 0.2 + edge_bonus + model_bonus
             candidates.append((score, r, m))
 
         candidates.sort(reverse=True, key=lambda x: x[0])
@@ -1198,17 +1147,491 @@ class RaceViewer(tk.Toplevel):
 
         self.picks_tree.delete(*self.picks_tree.get_children())
         for r, m in picks:
-            self.picks_tree.insert("", "end",
+            self.picks_tree.insert(
+                "", "end",
                 values=(r.get("no"), r.get("name"),
-                        fmt_price(m["win_fx"]), fmt_price(m["win_tote"]), "", "", "", "", ""))
+                        fmt_price(m.get("win_fx")), fmt_price(m.get("win_tote")), "", "", "", "", "")
+            )
 
+    # ----- Stakes
+    def compute_stakes(self):
+        """
+        Compute Dutch (equal-profit where feasible) and Kelly stakes for the picks grid,
+        update the table columns, and write a plan into the text box.
+        """
+        bankroll      = safe_float(self.bankroll_var.get(), 0.0) or 0.0
+        k_mult        = safe_float(self.kelly_mult_var.get(), 0.5) or 0.5
+        target_profit = safe_float(self.target_profit_var.get(), 0.0) or 0.0
+        use_tote      = self.use_tote_as_fair.get()
+
+        if bankroll <= 0:
+            messagebox.showwarning("Bankroll?", "Enter a positive bankroll amount.")
+            return
+
+        rows = self.picks_tree.get_children()
+        if not rows:
+            messagebox.showinfo("No picks", "Load picks from the runners table or use 'Recommend picks'.")
+            return
+
+        # clear computed cols
+        for iid in rows:
+            for col in ("kelly_pct", "stake", "dutch", "ret", "profit"):
+                try:
+                    self.picks_tree.set(iid, col, "")
+                except tk.TclError:
+                    pass
+
+        # Collect picks (need WinFx; WinTote optional for 'fair')
+        picks = []
+        for iid in rows:
+            no_   = self.picks_tree.set(iid, "no")
+            name  = self.picks_tree.set(iid, "name")
+            winfx = self._val_or_none(self.picks_tree.set(iid, "winfx"))
+            wintt = self._val_or_none(self.picks_tree.set(iid, "wintote"))
+            if winfx and winfx > 1.0:
+                picks.append({"iid": iid, "no": no_, "name": name, "winfx": float(winfx), "wintt": wintt})
+
+        if not picks:
+            messagebox.showinfo("No odds", "Your picks do not have WinFx odds.")
+            return
+
+        # Keep Model% current for context in plan or future extensions
+        self._compute_model_probs(silent=True)
+
+        plan_lines = []
+        plan_lines.append(f"Bankroll: ${bankroll:.2f}  |  Kelly mult: {k_mult:.2f}  |  Dutch target profit: ${target_profit:.2f}")
+        plan_lines.append(
+            "Assumptions: " +
+            ("Kelly uses WinTote as fair probability when available; if missing, falls back to WinFx implied (edge≈0)."
+             if use_tote else
+             "Kelly uses WinFx implied probability only.")
+        )
+        plan_lines.append("")
+
+        if all((p["winfx"] and p["wintt"] and p["winfx"] <= p["wintt"]) or p["wintt"] is None for p in picks):
+            plan_lines.append("Note: No measurable edge (Kelly<=0). Consider skipping this race.")
+
+        # Kelly per selection
+        total_kelly = 0.0
+        kelly_info = {}
+        for p in picks:
+            O = p["winfx"]
+            b = O - 1.0
+            if b <= 0:
+                kelly_info[p["iid"]] = (0.0, 0.0)
+                continue
+            if use_tote and p["wintt"] and p["wintt"] > 1.0:
+                fair_p = min(1.0, 1.0 / float(p["wintt"]))
+            else:
+                fair_p = min(1.0, 1.0 / O)  # no edge if using the same book line
+            q = 1.0 - fair_p
+            f = (b * fair_p - q) / b
+            f = max(0.0, f) * k_mult
+            stake = bankroll * f
+            total_kelly += stake
+            kelly_info[p["iid"]] = (f, stake)
+
+        # Dutch equal-profit (with guardrails)
+        dutch_stakes = {}
+        total_dutch = 0.0
+        dutch_note  = ""
+        T = 0.0
+
+        any_tote = any(
+            self._val_or_none(self.picks_tree.set(iid, "wintote")) and self._val_or_none(self.picks_tree.set(iid, "winfx"))
+            for iid in rows
+        )
+
+        pick_struct = []
+        for iid in rows:
+            winfx = self._val_or_none(self.picks_tree.set(iid, "winfx"))
+            if not (winfx and winfx > 1.0):
+                continue
+            wintt = self._val_or_none(self.picks_tree.set(iid, "wintote"))
+
+            value_ratio = None
+            if wintt and wintt > 1.0:
+                try:
+                    value_ratio = float(winfx) / float(wintt)
+                except Exception:
+                    value_ratio = None
+
+            kelly_f, _ = kelly_info.get(iid, (0.0, 0.0))
+            if any_tote:
+                if value_ratio is not None and value_ratio < 0.92:
+                    continue
+                if kelly_f <= 0.0:
+                    continue
+
+            pick_struct.append({"iid": iid, "O": float(winfx), "wintt": wintt, "kelly_f": kelly_f})
+
+        if any_tote:
+            pick_struct.sort(key=lambda x: x["kelly_f"], reverse=True)
+        else:
+            pick_struct.sort(key=lambda x: x["O"])
+
+        if target_profit > 0 and pick_struct:
+            K = sum(1.0 / p["O"] for p in pick_struct)
+            if K >= 0.98:
+                dutch_note = f"Dutch skipped: book too tight (Σ1/O={K:.2f})."
+                pick_struct = []
+            elif K >= 0.85:
+                dutch_note = f"Warning: tight market for dutching (Σ1/O={K:.2f})."
+
+            if K < 1.0 and pick_struct:
+                # equal-profit solution
+                T = (K * target_profit) / (1.0 - K)
+                total_dutch = T
+                for p in pick_struct:
+                    S_i = (T + target_profit) / p["O"]
+                    dutch_stakes[p["iid"]] = S_i
+                if not dutch_note:
+                    dutch_note = "Dutch stakes computed with equal-profit method across picks."
+            elif pick_struct:
+                # per-runner fallback
+                for p in pick_struct:
+                    S_i = target_profit / max(1e-9, (p["O"] - 1.0))
+                    dutch_stakes[p["iid"]] = S_i
+                total_dutch = sum(dutch_stakes.values())
+                if not dutch_note:
+                    dutch_note = "Equal-profit dutching not feasible (Σ1/O ≥ 1). Used per-runner fallback."
+
+        if dutch_note:
+            plan_lines.append(dutch_note)
+        if target_profit > 0 and pick_struct:
+            plan_lines.append(f"Dutch outlay total: ${total_dutch:.2f}")
+        plan_lines.append("")
+
+        # Update table + build plan
+        for iid in rows:
+            for col in ("kelly_pct", "dutch", "ret", "profit", "stake"):
+                self.picks_tree.set(iid, col, "")
+
+        for p in picks:
+            iid = p["iid"]; O = p["winfx"]; name = p["name"]; no_ = p["no"]
+            kelly_f, kelly_stake = kelly_info.get(iid, (0.0, 0.0))
+            d_stake = dutch_stakes.get(iid, 0.0)
+
+            exp_return = (d_stake * O) if d_stake > 0 else 0.0
+            exp_profit = (exp_return - total_dutch) if d_stake > 0 else 0.0
+            if T > 0 and d_stake > 0:
+                exp_profit = target_profit  # equal-profit case
+
+            # Use min(Kelly, Dutch) if both present; else whichever exists
+            if kelly_stake > 0 and d_stake > 0:
+                final_stake = min(kelly_stake, d_stake)
+            elif d_stake > 0:
+                final_stake = d_stake
+            else:
+                final_stake = kelly_stake
+
+            self.picks_tree.set(iid, "kelly_pct", f"{kelly_f*100:.1f}")
+            self.picks_tree.set(iid, "dutch", f"{d_stake:.2f}" if d_stake > 0 else "")
+            self.picks_tree.set(iid, "ret", f"{exp_return:.2f}" if d_stake > 0 else "")
+            self.picks_tree.set(iid, "profit", f"{(target_profit if T>0 and d_stake>0 else exp_profit):.2f}" if d_stake > 0 else "")
+            self.picks_tree.set(iid, "stake", f"{final_stake:.2f}" if final_stake > 0 else "")
+
+            plan_lines.append(
+                f"#{no_:>2} {name:28s}  WinFx {O:g}  "
+                f"Kelly% {kelly_f*100:.1f}  KellyStake ${kelly_stake:.2f}  "
+                f"Dutch ${d_stake:.2f}  Return ${exp_return:.2f}  Profit ${((target_profit if T>0 and d_stake>0 else exp_profit)):.2f}  "
+                f"=> Use ${final_stake:.2f}"
+            )
+
+        plan_lines.append("")
+        plan_lines.append(f"Totals - Kelly stakes: ${sum(k for _, k in kelly_info.values()):.2f}   Dutch stakes: ${total_dutch:.2f}")
+
+        self.plan_text.delete("1.0", "end")
+        self.plan_text.insert("1.0", "\n".join(plan_lines))
+
+    # ===== Results utils =====
+    def _results_url_parts(self):
+        date_str = (self.race.get("race_date_nz") or "").strip()
+        if not date_str:
+            date_str = (self.parent.date_var.get() or "").strip()
+        meetno = self.parent.current_meetno()
+        raceno = safe_int(self.race.get("race_number"))
+        return date_str, meetno, raceno
+
+    def _fetch_results_json(self):
+        date_str, meetno, raceno = self._results_url_parts()
+        if not (date_str and meetno and raceno):
+            raise ValueError("Missing date or meet or race number to fetch results.")
+        url = f"{RESULTS_BASE}/{date_str}/{meetno}/{raceno}"
+        r = self.parent.session.get(url, timeout=TIMEOUT)
+        r.raise_for_status()
+        return r.json()
+
+    def _extract_placings_map(self, res_json):
+        try:
+            mtgs = res_json.get("meetings") or []
+            races = mtgs[0].get("races") or []
+            placings = races[0].get("placings") or []
+        except Exception:
+            placings = []
+        places = {}
+        for p in placings:
+            rank = safe_int(p.get("rank"))
+            num = safe_int(p.get("number"))
+            if rank in (1, 2, 3) and num:
+                places[rank] = num
+        return places
+
+    def _clear_result_tags(self):
+        for iid in self.tree.get_children(""):
+            current = set(self.tree.item(iid, "tags"))
+            current.difference_update({"winner", "second", "third"})
+            self.tree.item(iid, tags=tuple(current))
+
+    def _apply_result_tags(self, places):
+        def iid_for_runner(num):
+            iid = f"r{num}"
+            if iid in self.tree.get_children(""):
+                return iid
+            for it in self.tree.get_children(""):
+                if safe_int(self.tree.set(it, "no")) == num:
+                    return it
+            return None
+        self._clear_result_tags()
+        for rank, tag in [(1, "winner"), (2, "second"), (3, "third")]:
+            num = places.get(rank)
+            if not num:
+                continue
+            iid = iid_for_runner(num)
+            if not iid:
+                continue
+            current = set(self.tree.item(iid, "tags"))
+            current.add(tag)
+            self.tree.item(iid, tags=tuple(current))
+            if rank == 1:
+                self.tree.see(iid)
+
+    def check_results(self):
+        try:
+            res = self._fetch_results_json()
+            places = self._extract_placings_map(res)
+            if not places:
+                messagebox.showinfo("Results", "No placings found yet for this race.")
+                return
+            self._apply_result_tags(places)
+            messagebox.showinfo(
+                "Results",
+                "Placings loaded.\n"
+                f"1st: #{places.get(1, '?')}   2nd: #{places.get(2, '?')}   3rd: #{places.get(3, '?')}"
+            )
+        except Exception as e:
+            messagebox.showerror("Results error", f"Could not fetch or apply results:\n{e}")
+
+    # ===== Model win% (robust) =====
+    def _compute_model_probs(self, silent=True):
+        """
+        Compute per runner model win probabilities and store in self.model_winp_by_no.
+        Prefers your infer_from_schedule_json pipeline; falls back to market implied
+        (WinTote or WinFx) and then equal split. Sanitises NaNs and renormalises.
+        """
+        self.model_winp_by_no = {}
+        try:
+            # Try your schedule -> DF -> model pipeline if available
+            from infer_from_schedule_json import (
+                fetch_schedule_json,
+                schedule_json_to_df,
+                estimate_position_probs_for_race_df,
+            )
+            date_str, meetno, raceno = self._results_url_parts()
+            if not (date_str and meetno and raceno):
+                raise RuntimeError("missing coords")
+            sched = fetch_schedule_json(date_str, int(meetno), int(raceno))
+            df = schedule_json_to_df(sched)
+            preds = estimate_position_probs_for_race_df(df)  # expects 'runner_number' and 'win_prob'
+            rn = preds.get("runner_number")
+            wp = preds.get("win_prob")
+            if rn is None or wp is None or len(preds) == 0:
+                raise RuntimeError("model returned empty")
+
+            import numpy as _np
+            nums = _np.array([safe_int(x, None) for x in rn], dtype=object)
+            probs = _np.array([safe_float(x, None) for x in wp], dtype=float)
+            probs = _np.nan_to_num(probs, nan=0.0, posinf=0.0, neginf=0.0)
+            probs = _np.clip(probs, 0.0, None)
+            s = float(probs.sum())
+            if s <= 0.0:
+                raise RuntimeError("probabilities contain NaN or sum to 0")
+            probs = probs / s
+
+            out = {}
+            for n, p in zip(nums, probs):
+                if n is not None:
+                    out[int(n)] = float(p)
+
+            # restrict to visible runners
+            self.model_winp_by_no = {int(r.get("no")): float(out.get(int(r.get("no")), 0.0))
+                                     for r in self.runners if r.get("no") is not None}
+            return
+        except Exception as e:
+            if not silent:
+                messagebox.showwarning("Model", f"Model% fallback: {e}")
+
+        # Fallback 1: market implied using WinTote if available else WinFx
+        try:
+            vals = []
+            have_any = False
+            for r in self.runners:
+                m = r.get("metrics", {})
+                O = m.get("win_tote") or m.get("win_fx")
+                p = 1.0/float(O) if (O and O > 1.0) else 0.0
+                if p > 0:
+                    have_any = True
+                vals.append((r.get("no"), p))
+            if have_any:
+                tot = sum(v for _, v in vals)
+                if tot > 0:
+                    self.model_winp_by_no = {int(no): (v/tot) for no, v in vals if no is not None}
+                    return
+        except Exception:
+            pass
+
+        # Fallback 2: equal split
+        n = max(1, sum(1 for r in self.runners if r.get("no") is not None))
+        self.model_winp_by_no = {int(r.get("no")): 1.0/n for r in self.runners if r.get("no") is not None}
+
+    # ===== Odds refresh =====
     def refresh_odds(self):
         """Fetch latest TAB odds for this race, merge, and refresh tables."""
         try:
             date_str = (self.parent.date_var.get() or "").strip()
             meetno = self.parent.current_meetno()
             raceno = safe_int(self.race.get("race_number"))
+            if not (date_str and meetno and raceno):
+                messagebox.showwarning("Cannot refresh", "Need date, meeting, and race numbers.")
+                return
 
+            markets = fetch_tab_odds(self.parent.session, date_str, meetno, raceno)
+            prices_by_num = extract_prices_from_markets(markets)
+            merge_odds_into_event(self.payload, prices_by_num)
+
+            self.runners = extract_runners(self.payload)
+            race_cond = self.race.get("track_condition") or ""
+            for r in self.runners:
+                r["metrics"] = compute_runner_metrics(r, race_cond)
+
+            # keep model current after odds update if you like
+            self._compute_model_probs(silent=True)
+
+            # top table
+            self.tree.delete(*self.tree.get_children())
+            for r in self.runners:
+                m = r.get("metrics", {})
+                self.tree.insert(
+                    "",
+                    "end",
+                    iid=f"r{r.get('no')}",
+                    values=(
+                        r.get("no") or "",
+                        r.get("name") or "",
+                        r.get("barrier") or "",
+                        r.get("jockey") or "",
+                        r.get("weight") or "",
+                        fmt_price(r.get("win_fixed")),
+                        fmt_price(r.get("place_fixed")),
+                        fmt_price(r.get("win_tote")),
+                        fmt_price(r.get("place_tote")),
+                        r.get("flucs_disp") or "",
+                        (r.get("form") or "")[:24],
+                        m.get("edge") or "",
+                    ),
+                )
+
+            # signals table
+            if hasattr(self, "sig_tree"):
+                self.sig_tree.delete(*self.sig_tree.get_children())
+                for r in self.runners:
+                    m = r.get("metrics", {})
+                    no_i = r.get("no")
+                    model_p = self.model_winp_by_no.get(int(no_i)) if no_i is not None else None
+                    self.sig_tree.insert(
+                        "",
+                        "end",
+                        iid=f"r{no_i}",
+                        values=(
+                            no_i or "",
+                            r.get("name") or "",
+                            fmt_price(m.get("win_fx")),
+                            fmt_price(m.get("win_tote")),
+                            ("" if model_p is None else f"{model_p*100:.1f}"),
+                            pct(m.get("imp_win")),
+                            pct(m.get("firming_pct")),
+                            pct(m.get("ew_overlay_pct")),
+                            pct(m.get("kelly_pct1x")),
+                            m.get("pace") or "",
+                            m.get("edge") or "",
+                        ),
+                    )
+
+            # update picks odds
+            if hasattr(self, "picks_tree"):
+                by_no = {str(r.get("no")): r.get("metrics", {}) for r in self.runners}
+                for iid in self.picks_tree.get_children():
+                    no_ = self.picks_tree.set(iid, "no")
+                    m = by_no.get(no_ or "")
+                    if m:
+                        self.picks_tree.set(iid, "winfx", fmt_price(m.get("win_fx")))
+                        self.picks_tree.set(iid, "wintote", fmt_price(m.get("win_tote")))
+
+            messagebox.showinfo("Odds", "Odds refreshed.")
+        except Exception as e:
+            messagebox.showerror("Odds", f"Failed to refresh odds:\n{e}")
+
+    # ===== Clipboard and file
+    def copy_plan(self):
+        try:
+            txt = self.plan_text.get("1.0", "end-1c")
+            self.clipboard_clear()
+            self.clipboard_append(txt)
+            self.update_idletasks()
+            messagebox.showinfo("Copied", "Plan copied to clipboard")
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to copy:\n{e}")
+
+    def save_plan(self):
+        path = filedialog.asksaveasfilename(
+            defaultextension=".txt",
+            filetypes=[("Text files", "*.txt"), ("All files", "*.*")],
+            title="Save staking plan"
+        )
+        if not path:
+            return
+        try:
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(self.plan_text.get("1.0", "end-1c"))
+            messagebox.showinfo("Saved", f"Saved to:\n{path}")
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to save file:\n{e}")
+
+    # ----- Raw JSON / Save event JSON
+    def show_raw(self):
+        JsonViewer(self, self.payload, title="Raw Event JSON")
+
+    def save_json(self):
+        path = filedialog.asksaveasfilename(
+            defaultextension=".json",
+            filetypes=[("JSON files", "*.json"), ("All files", "*.*")],
+            title="Save event JSON",
+        )
+        if not path:
+            return
+        try:
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(self.payload, f, indent=2, sort_keys=True)
+            messagebox.showinfo("Saved", f"Saved to:\n{path}")
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to save file:\n{e}")
+
+    def refresh_odds(self):
+        """Fetch latest TAB odds for this race, merge, and refresh tables + plan text."""
+        try:
+            date_str = (self.parent.date_var.get() or "").strip()
+            meetno = self.parent.current_meetno()
+            raceno = safe_int(self.race.get("race_number"))
             if not (date_str and meetno and raceno):
                 messagebox.showwarning("Can't refresh", "Need date, meeting, and race numbers.")
                 return
@@ -1223,6 +1646,9 @@ class RaceViewer(tk.Toplevel):
             race_cond = self.race.get("track_condition") or ""
             for r in self.runners:
                 r["metrics"] = compute_runner_metrics(r, race_cond)
+
+            # Recompute model probabilities (non-fatal)
+            self._compute_model_probs(silent=True)
 
             # Refill TOP runners table
             self.tree.delete(*self.tree.get_children())
@@ -1248,11 +1674,13 @@ class RaceViewer(tk.Toplevel):
                     ),
                 )
 
-            # Refill SIGNALS table (if present)
+            # Refill SIGNALS table
             if hasattr(self, "sig_tree"):
                 self.sig_tree.delete(*self.sig_tree.get_children())
                 for r in self.runners:
                     m = r.get("metrics", {})
+                    no_i = r.get("no")
+                    model_p = self.model_winp_by_no.get(int(no_i)) if no_i is not None else None
                     self.sig_tree.insert(
                         "",
                         "end",
@@ -1261,6 +1689,7 @@ class RaceViewer(tk.Toplevel):
                             r.get("name") or "",
                             fmt_price(m.get("win_fx")),
                             fmt_price(m.get("win_tote")),
+                            ("" if model_p is None else f"{model_p*100:.1f}"),
                             pct(m.get("imp_win")),
                             pct(m.get("firming_pct")),
                             pct(m.get("ew_overlay_pct")),
@@ -1280,198 +1709,37 @@ class RaceViewer(tk.Toplevel):
                         self.picks_tree.set(iid, "winfx", fmt_price(m.get("win_fx")))
                         self.picks_tree.set(iid, "wintote", fmt_price(m.get("win_tote")))
 
+            # Quick text block so you have instructions/output on odds refresh
+            try:
+                lines = ["Odds refreshed. Quick model vs market view:"]
+                ranked = sorted(
+                    self.runners,
+                    key=lambda rr: (-(self.model_winp_by_no.get(int(rr.get("no") or -1)) or 0.0),
+                                    (rr["metrics"].get("win_fx") or 9e9))
+                )
+                for r in ranked[:6]:
+                    m = r.get("metrics", {})
+                    O = m.get("win_fx"); T = m.get("win_tote")
+                    mp = self.model_winp_by_no.get(int(r.get("no") or -1))
+                    be = (1.0 / O) if (O and O > 0) else None
+                    lines.append(
+                        f"  #{r.get('no')} {r.get('name')}  "
+                        f"WinFx {fmt_price(O)}  WinTote {fmt_price(T)}  "
+                        f"Model% {(f'{mp*100:.1f}' if mp is not None else '—')}  "
+                        f"Imp% {pct(m.get('imp_win'))}  Kelly% {pct(m.get('kelly_pct1x'))}  "
+                        f"{'(BE ' + f'{be:.3f}'+')' if be else ''}"
+                    )
+                if hasattr(self, "plan_text") and self.plan_text:
+                    self.plan_text.delete("1.0","end")
+                    self.plan_text.insert("1.0", "\n".join(lines))
+            except Exception:
+                pass
+
             messagebox.showinfo("Odds", "Odds refreshed.")
         except Exception as e:
             messagebox.showerror("Odds", f"Failed to refresh odds:\n{e}")
 
-
-    def compute_stakes(self):
-        bankroll = safe_float(self.bankroll_var.get(), 0.0) or 0.0
-        k_mult = safe_float(self.kelly_mult_var.get(), 0.5) or 0.5
-        target_profit = safe_float(self.target_profit_var.get(), 0.0) or 0.0
-        use_tote = self.use_tote_as_fair.get()
-
-        if bankroll <= 0:
-            messagebox.showwarning("Bankroll?", "Enter a positive bankroll amount.")
-            return
-
-        rows = self.picks_tree.get_children()
-        # clear computed cols
-        for iid in rows:
-            for col in ("kelly_pct", "stake", "dutch", "ret", "profit"):
-                try:
-                    self.picks_tree.set(iid, col, "")
-                except tk.TclError:
-                    pass
-
-        if not rows:
-            messagebox.showinfo("No picks", "Load picks from the runners table or use 'Recommend picks'.")
-            return
-
-        # Collect picks with usable WinFx
-        picks = []
-        for iid in rows:
-            no_ = self.picks_tree.set(iid, "no")
-            name = self.picks_tree.set(iid, "name")
-            winfx = self._val_or_none(self.picks_tree.set(iid, "winfx"))
-            wintt = self._val_or_none(self.picks_tree.set(iid, "wintote"))
-            if winfx and winfx > 1.0:
-                picks.append({"iid": iid, "no": no_, "name": name, "winfx": float(winfx), "wintt": wintt})
-
-        plan_lines = []
-        plan_lines.append(f"Bankroll: ${bankroll:.2f}  |  Kelly mult: {k_mult:.2f}  |  Dutch target profit: ${target_profit:.2f}")
-        plan_lines.append("Assumptions: " + ("Kelly uses WinTote as fair probability when available; if missing, falls back to WinFx implied (edge≈0)." if use_tote else "Kelly uses WinFx implied probability only."))
-        plan_lines.append("")
-
-        if all((p["winfx"] and p["wintt"] and p["winfx"] <= p["wintt"]) or p["wintt"] is None for p in picks):
-            plan_lines.append("Note: No measurable edge (Kelly<=0). Consider skipping this race.")
-
-
-        # ---------- Kelly (per selection) ----------
-        total_kelly = 0.0
-        kelly_info = {}
-        for p in picks:
-            O = p["winfx"]
-            b = O - 1.0
-            if b <= 0:
-                kelly_info[p["iid"]] = (0.0, 0.0)
-                continue
-            if use_tote and p["wintt"] and p["wintt"] > 1.0:
-                fair_p = min(1.0, 1.0 / float(p["wintt"]))
-            else:
-                fair_p = min(1.0, 1.0 / O)  # no edge if using the same book line
-            q = 1.0 - fair_p
-            f = (b * fair_p - q) / b
-            f = max(0.0, f)
-            f *= k_mult
-            stake = bankroll * f
-            total_kelly += stake
-            kelly_info[p["iid"]] = (f, stake)
-
-        # ---------- Dutching (equal-profit with guardrails) ----------
-        dutch_stakes = {}
-        total_dutch = 0.0
-        dutch_note = ""
-        T = 0.0
-
-        # Determine if any tote exists among picks to allow Kelly capping and EV filters
-        any_tote = any(safe_float(self.picks_tree.set(iid, "wintote")) and safe_float(self.picks_tree.set(iid, "wintote")) > 1.0
-                    for iid in rows if self._val_or_none(self.picks_tree.set(iid, "winfx")))
-
-        # Build a small struct we can filter with
-        pick_struct = []
-        for iid in rows:
-            winfx = self._val_or_none(self.picks_tree.set(iid, "winfx"))
-            if not (winfx and winfx > 1.0):
-                continue
-            wintt = self._val_or_none(self.picks_tree.set(iid, "wintote"))
-            # value guardrail when tote exists for this runner
-            value_ratio = None
-            if wintt and wintt > 1.0:
-                try:
-                    value_ratio = float(winfx) / float(wintt)
-                except Exception:
-                    value_ratio = None
-            # require positive Kelly only if any tote exists in race
-            kelly_f, kelly_stake = kelly_info.get(iid, (0.0, 0.0))
-            if any_tote:
-                if value_ratio is not None and value_ratio < 0.92:
-                    continue
-                if kelly_f <= 0.0:
-                    continue
-            pick_struct.append({"iid": iid, "O": float(winfx), "wintt": wintt, "kelly_f": kelly_f})
-
-        # Replace rows list with filtered order:
-        if any_tote:
-            pick_struct.sort(key=lambda x: x["kelly_f"], reverse=True)
-        else:
-            pick_struct.sort(key=lambda x: x["O"])
-
-        if target_profit > 0 and pick_struct:
-            K = sum(1.0 / p["O"] for p in pick_struct)
-            if K >= 0.98:
-                dutch_note = f"Dutch skipped: book too tight (Σ1/O={K:.2f})."
-                pick_struct = []
-            elif K >= 0.85:
-                dutch_note = f"Warning: tight market for dutching (Σ1/O={K:.2f})."
-            if K < 1.0 and pick_struct:
-                # equal-profit solution
-                T = (K * target_profit) / (1.0 - K)
-                total_dutch = T
-                for p in pick_struct:
-                    S_i = (T + target_profit) / p["O"]
-                    dutch_stakes[p["iid"]] = S_i
-                if not dutch_note:
-                    dutch_note = "Dutch stakes computed with equal-profit method across picks."
-            elif pick_struct:
-                # per-runner fallback
-                for p in pick_struct:
-                    S_i = target_profit / max(1e-9, (p["O"] - 1.0))
-                    dutch_stakes[p["iid"]] = S_i
-                total_dutch = sum(dutch_stakes.values())
-                if not dutch_note:
-                    dutch_note = "Equal-profit dutching not feasible (Σ1/O ≥ 1). Used per-runner fallback."
-
-        plan_lines.append(dutch_note)
-        if target_profit > 0 and pick_struct:
-            plan_lines.append(f"Dutch outlay total: ${total_dutch:.2f}")
-        plan_lines.append("")
-
-
-        # ---------- Per-line outputs & table updates ----------
-        for iid in rows:
-            # defaults for lines not in picks
-            self.picks_tree.set(iid, "kelly_pct", "")
-            self.picks_tree.set(iid, "dutch", "")
-            self.picks_tree.set(iid, "ret", "")
-            self.picks_tree.set(iid, "profit", "")
-            self.picks_tree.set(iid, "stake", "")
-
-        for p in picks:
-            iid = p["iid"]
-            O = p["winfx"]
-            name = p["name"]
-            no_ = p["no"]
-
-            # Kelly
-            kelly_f, kelly_stake = kelly_info.get(iid, (0.0, 0.0))
-
-            # Dutch
-            d_stake = dutch_stakes.get(iid, 0.0)
-
-            # Expected return (gross payout) and profit for Dutching
-            exp_return = (d_stake * O) if d_stake > 0 else 0.0
-            exp_profit = (T + target_profit - T) if (d_stake > 0 and total_dutch > 0 and T > 0) else (exp_return - total_dutch if d_stake > 0 else 0.0)
-            # If equal-profit dutching, exp_return should equal (T + P) for every selection and profit = P
-
-            # Final "Use" stake = min(Kelly, Dutch) if both > 0, else whichever exists
-            if kelly_stake > 0 and d_stake > 0:
-                final_stake = min(kelly_stake, d_stake)
-            elif d_stake > 0:
-                final_stake = d_stake
-            else:
-                final_stake = kelly_stake
-
-            # Update table
-            self.picks_tree.set(iid, "kelly_pct", f"{kelly_f*100:.1f}")
-            self.picks_tree.set(iid, "dutch", f"{d_stake:.2f}" if d_stake > 0 else "")
-            self.picks_tree.set(iid, "ret", f"{exp_return:.2f}" if d_stake > 0 else "")
-            self.picks_tree.set(iid, "profit", f"{(target_profit if T>0 and d_stake>0 else exp_profit):.2f}" if d_stake > 0 else "")
-            self.picks_tree.set(iid, "stake", f"{final_stake:.2f}" if final_stake > 0 else "")
-
-            plan_lines.append(
-                f"#{no_:>2} {name:28s}  WinFx {O:g}  "
-                f"Kelly% {kelly_f*100:.1f}  KellyStake ${kelly_stake:.2f}  "
-                f"Dutch ${d_stake:.2f}  Return ${exp_return:.2f}  Profit ${((target_profit if T>0 and d_stake>0 else exp_profit)):.2f}  "
-                f"=> Use ${final_stake:.2f}"
-            )
-
-        plan_lines.append("")
-        plan_lines.append(f"Totals — Kelly stakes: ${total_kelly:.2f}   Dutch stakes: ${total_dutch:.2f}")
-
-        self.plan_text.delete("1.0", "end")
-        self.plan_text.insert("1.0", "\n".join(plan_lines))
-
+    # Copy/save plan
     def copy_plan(self):
         try:
             txt = self.plan_text.get("1.0", "end-1c")
@@ -1500,8 +1768,6 @@ class RaceViewer(tk.Toplevel):
     # ----- Raw JSON / Save -----
     def show_raw(self):
         JsonViewer(self, self.payload, title="Raw Event JSON")
-    
-
 
     def save_json(self):
         path = filedialog.asksaveasfilename(
@@ -1517,6 +1783,26 @@ class RaceViewer(tk.Toplevel):
             messagebox.showinfo("Saved", f"Saved to:\n{path}")
         except Exception as e:
             messagebox.showerror("Error", f"Failed to save file:\n{e}")
+
+    # Results
+    def check_results(self):
+        """Fetch results and highlight 1-2-3."""
+        try:
+            res = self._fetch_results_json()
+            places = self._extract_placings_map(res)
+            if not places:
+                messagebox.showinfo("Results", "No placings found yet for this race.")
+                return
+            self._apply_result_tags(places)
+            messagebox.showinfo(
+                "Results",
+                "Placings loaded.\n"
+                f"1st: #{places.get(1, '?')}   2nd: #{places.get(2, '?')}   3rd: #{places.get(3, '?')}"
+            )
+        except Exception as e:
+            messagebox.showerror("Results error", f"Could not fetch/apply results:\n{e}")
+
+
 
 class DaySlipDialog(tk.Toplevel):
     def __init__(self, parent):
@@ -1855,7 +2141,7 @@ class RacingGUI(tk.Tk):
         • Always attempt to merge TAB tote odds before computing metrics (parity with RaceViewer).
         • Kelly% from compute_runner_metrics(); same logic as RaceViewer.
         • Kelly mode: if NO tote exists in the race, do NOT filter by min_kelly_pct.
-            If tote exists but nothing passes, fallback to best score/shortest odds.
+        If tote exists but nothing passes, fallback to best score/shortest odds.
         • Dutch mode guardrails:
             - If runner has tote: skip when value_ratio = win_fx / win_tote < 0.92
             - If any tote exists in race: require Kelly>0 for picks
@@ -1903,7 +2189,6 @@ class RacingGUI(tk.Tk):
                 continue
             if m.get("win_tote") and m["win_tote"] > 1.0:
                 any_tote = True
-            # precompute value_ratio only when runner has tote
             value_ratio = None
             if m.get("win_tote") and m["win_tote"] > 1.0:
                 try:
@@ -1918,20 +2203,15 @@ class RacingGUI(tk.Tk):
             lines.append("--------------------------------")
             return "\n".join(lines)
 
-        
         # Parse numeric inputs
         try:
             max_p = int(max_picks) if max_picks else 0
         except Exception:
             max_p = 0
-
         bankroll = max(0.0, safe_float(bankroll, 0.0) or 0.0)
         km       = max(0.0, safe_float(k_mult, 0.5) or 0.5)
-        # >>> interpret Min Kelly as a PERCENT (e.g. 1.0 = 1%)
-        min_k_raw = safe_float(min_kelly_pct, 0.0) or 0.0
-        min_k     = max(0.0, min_k_raw / 100.0)      # <-- key change
+        min_k    = max(0.0, (safe_float(min_kelly_pct, 0.0) or 0.0) / 100.0)  # treat UI “Min Kelly %” as percent
         P        = max(0.0, safe_float(dutch_profit, 0.0) or 0.0)
-
 
         strat = str(strategy).lower()
         picks = []
@@ -1940,10 +2220,8 @@ class RacingGUI(tk.Tk):
         if strat.startswith("dutch"):
             filtered = []
             for r, m, O, value_ratio, kelly in cand:
-                # value guardrail only when this runner has tote
                 if value_ratio is not None and value_ratio < 0.92:
                     continue
-                # if race has any tote at all, require positive Kelly (EV>0)
                 if any_tote and kelly <= 0:
                     continue
                 filtered.append((r, m, O, value_ratio, kelly))
@@ -1953,7 +2231,6 @@ class RacingGUI(tk.Tk):
                 lines.append("--------------------------------")
                 return "\n".join(lines)
 
-            # Rank by Kelly when any tote; else by shortest odds
             if any_tote:
                 filtered.sort(key=lambda t: t[4], reverse=True)
             else:
@@ -1961,7 +2238,6 @@ class RacingGUI(tk.Tk):
 
             picks = filtered[:max_p] if max_p > 0 else filtered
 
-            # Book tightness checks
             Os = [O for (_, _, O, _, _) in picks]
             K = sum(1.0 / o for o in Os if o and o > 1.0)
             if K >= 0.98:
@@ -1971,26 +2247,20 @@ class RacingGUI(tk.Tk):
             elif K >= 0.85:
                 lines.append(f"  Caution: tight market for dutching (Σ1/O={K:.2f}).")
 
-            # Stakes
             if P > 0 and K < 1.0:
-                # Equal‑profit solution
                 T = (K * P) / (1.0 - K)  # total outlay
                 for (r, m, O, _vr, kelly) in picks:
                     S_dutch = (T + P) / O
-                    # Kelly cap only meaningful when any tote exists
                     S_kelly = bankroll * (max(0.0, kelly) * km) if any_tote else float('inf')
                     S_use = min(S_dutch, S_kelly)
-                    profit = P if S_use >= S_dutch - 1e-6 else max(0.0, S_use * O - T)
                     payout = S_use * (O - 1.0)
                     breakeven_p = 1.0 / O
-                    # EV when dutching is not the goal (equal profit), so show win payout instead
                     lines.append(
                         f"  #{r.get('no')} {r.get('name')} @ ${O:g}  "
                         f"use ${S_use:.2f}  payout_if_wins ${payout:.2f}  "
                         f"(kelly_cap ${0.0 if not any_tote else S_kelly:.2f}, BE P {breakeven_p:.3f})"
                     )
             else:
-                # Per‑runner fallback targeting P per runner
                 for (r, m, O, _vr, kelly) in picks:
                     S_dutch = P / max(1e-9, (O - 1.0)) if P > 0 else 0.0
                     S_kelly = bankroll * (max(0.0, kelly) * km) if any_tote else float('inf')
@@ -2004,17 +2274,13 @@ class RacingGUI(tk.Tk):
 
         # ---------- KELLY MODE ----------
         else:
-            # Build filtered list
             filtered = []
             for r, m, O, _vr, kelly in cand:
                 if any_tote:
-                    # apply threshold only if at least one tote exists in the race
                     if kelly < min_k:
                         continue
-                # when no tote, do NOT filter by Kelly (per your requirement)
                 filtered.append((r, m, O, kelly))
 
-            # If nothing passed and we do have tote somewhere, fallback to best score/shortest odds
             if not filtered and any_tote:
                 tmp = []
                 for r, m, O, _vr, _kelly in cand:
@@ -2028,7 +2294,6 @@ class RacingGUI(tk.Tk):
                 filtered = [(r, m, O, m.get("kelly_pct1x") or 0.0) for (score, r, m, O) in tmp]
                 lines.append("  (no picks met Min Kelly%; fell back to best scores/shortest odds)")
 
-            # Rank by Kelly when any tote; else by shorter odds
             if any_tote:
                 filtered.sort(key=lambda t: t[3], reverse=True)
             else:
@@ -2036,7 +2301,6 @@ class RacingGUI(tk.Tk):
 
             picks = filtered[:max_p] if max_p > 0 else filtered
 
-            # Stakes (Kelly fractional). Also show EV and payout if wins.
             for (r, m, O, _k) in picks:
                 b = O - 1.0
                 if use_tote and (m.get("win_tote") and m["win_tote"] > 1.0):
@@ -2046,9 +2310,9 @@ class RacingGUI(tk.Tk):
                 q = 1.0 - p
                 f = max(0.0, (b * p - q) / b) * km
                 S = bankroll * f
-                roi_ev = (O * p) - 1.0              # per-$ expected return
-                ev_profit = S * roi_ev              # expected profit (EV)
-                payout_if_wins = S * (O - 1.0)      # gross profit if it wins
+                roi_ev = (O * p) - 1.0
+                ev_profit = S * roi_ev
+                payout_if_wins = S * (O - 1.0)
                 breakeven_p = 1.0 / O
 
                 lines.append(
