@@ -29,10 +29,24 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
-from model_features import build_model_features_df
-from pytorch_pre import load_model_and_predict
 import pandas as pd
 from pytorch_pre import estimate_position_probs_for_race as estimate_model_probs
+import lgbm_rank as gbm  # <— your LightGBM helper
+import numpy as np
+from pytorch_pre import _scores_from_pred_rank as nn_scores_from_rank
+from infer_from_schedule_json import (
+    fetch_schedule_json as _sched_fetch,
+    schedule_json_to_df as _sched_to_df,
+    estimate_position_probs_for_race_df as _nn_probs_for_df,
+)
+
+# GBM model file names 
+GBM_RANK_MODEL_NAME = "model_lgbm.txt"
+GBM_REG_MODEL_NAME  = "model_lgbm_reg.txt"
+
+# calibration / blending for GBM models TODO need to bring this as sliders to RaceViewer
+PL_TAU = 0.3
+BLEND_ALPHA = 0.6
 
 
 NZ = ZoneInfo("Pacific/Auckland")
@@ -859,7 +873,7 @@ class RaceViewer(tk.Toplevel):
             r["metrics"] = compute_runner_metrics(r, race_cond)
 
         # compute Model% once (NaN-proof; falls back to market or equal split)
-        self._compute_model_probs(silent=True)
+        self._compute_all_model_probs(silent=True)
 
         # ----- Header
         hdr = ttk.Frame(self, padding=10)
@@ -969,25 +983,29 @@ class RaceViewer(tk.Toplevel):
         nb = ttk.Notebook(self)
         nb.pack(side="top", fill="both", expand=True, padx=10, pady=(0, 10))
 
-        # Signals tab
-        sig_frame = ttk.Frame(nb, padding=10)
-        nb.add(sig_frame, text="Signals")
+        self.sig_frame = ttk.Frame(nb, padding=10)
+        nb.add(self.sig_frame, text="Signals")
 
-        sig_cols = ("no","name","winfx","wintote","model","imp","firm","ewov","kelly","pace","edge")
-        self.sig_tree = ttk.Treeview(sig_frame, columns=sig_cols, show="headings", height=10)
+        # Signals tab
+        sig_cols = ("no","name","winfx","wintote","model_nn","model_reg","model_rank","imp","firm","ewov","kelly","pace","edge")
+        self.sig_tree = ttk.Treeview(self.sig_frame, columns=sig_cols, show="headings", height=10)
+
         for cid, label in zip(
             sig_cols,
-            ["#","Runner","WinFx","WinTote","Model%","Imp%","Firm%","EWov%","Kelly%","Pace","Edge"]
+            ["#","Runner","WinFx","WinTote","Model_NN%","Model_Reg%","Model_Rank%","Imp%","Firm%","EWov%","Kelly%","Pace","Edge"]
         ):
             self.sig_tree.heading(cid, text=label)
+
         for cid, w, anchor in [
             ("no",60,"center"),("name",260,"w"),("winfx",80,"center"),("wintote",80,"center"),
-            ("model",80,"center"),("imp",80,"center"),("firm",80,"center"),
-            ("ewov",80,"center"),("kelly",80,"center"),("pace",120,"w"),("edge",160,"w")
+            ("model_nn",90,"center"),("model_reg",90,"center"),("model_rank",90,"center"),
+            ("imp",80,"center"),("firm",80,"center"),("ewov",80,"center"),
+            ("kelly",80,"center"),("pace",120,"w"),("edge",160,"w")
         ]:
             self.sig_tree.column(cid, width=w, anchor=anchor)
 
-        sig_vsb = ttk.Scrollbar(sig_frame, orient="vertical", command=self.sig_tree.yview)
+
+        sig_vsb = ttk.Scrollbar(self.sig_frame, orient="vertical", command=self.sig_tree.yview)
         self.sig_tree.configure(yscroll=sig_vsb.set)
         self.sig_tree.pack(side="left", fill="both", expand=True)
         sig_vsb.pack(side="right", fill="y")
@@ -997,7 +1015,11 @@ class RaceViewer(tk.Toplevel):
         for r in self.runners:
             m = r["metrics"]
             no_i = r.get("no")
-            model_p = self.model_winp_by_no.get(int(no_i)) if no_i is not None else None
+            nn_p   = self.model_winp_by_no_nn.get(int(no_i)) if no_i is not None else None
+            reg_p  = self.model_winp_by_no_reg.get(int(no_i)) if no_i is not None else None
+            rank_p = self.model_winp_by_no_rank.get(int(no_i)) if no_i is not None else None
+
+
             self.sig_tree.insert(
                 "",
                 "end",
@@ -1007,7 +1029,9 @@ class RaceViewer(tk.Toplevel):
                     r.get("name") or "",
                     fmt_price(m.get("win_fx")),
                     fmt_price(m.get("win_tote")),
-                    ("" if model_p is None else f"{model_p*100:.1f}"),
+                    ("" if nn_p   is None else f"{nn_p*100:.1f}"),
+                    ("" if reg_p  is None else f"{reg_p*100:.1f}"),
+                    ("" if rank_p is None else f"{rank_p*100:.1f}"),
                     pct(m.get("imp_win")),
                     pct(m.get("firming_pct")),
                     pct(m.get("ew_overlay_pct")),
@@ -1016,6 +1040,7 @@ class RaceViewer(tk.Toplevel):
                     m.get("edge") or "",
                 ),
             )
+
 
         # Staking tab
         stk_frame = ttk.Frame(nb, padding=10)
@@ -1135,9 +1160,15 @@ class RaceViewer(tk.Toplevel):
             # small bonus for higher model probability if available
             model_bonus = 0.0
             no_i = safe_int(r.get("no"))
-            if no_i and hasattr(self, "model_winp_by_no"):
-                mp = self.model_winp_by_no.get(no_i, 0.0)
-                model_bonus = mp * 0.5  # gentle nudge
+            import numpy as np
+            if no_i:
+                mp = np.mean([
+                    self.model_winp_by_no_nn.get(no_i, 0.0),
+                    self.model_winp_by_no_reg.get(no_i, 0.0),
+                    self.model_winp_by_no_rank.get(no_i, 0.0),
+                ])
+                model_bonus = mp * 0.5
+
 
             score = overlay * 2.0 + firm_adj * 0.2 + edge_bonus + model_bonus
             candidates.append((score, r, m))
@@ -1196,7 +1227,7 @@ class RaceViewer(tk.Toplevel):
             return
 
         # Keep Model% current for context in plan or future extensions
-        self._compute_model_probs(silent=True)
+        self._compute_all_model_probs(silent=True)
 
         plan_lines = []
         plan_lines.append(f"Bankroll: ${bankroll:.2f}  |  Kelly mult: {k_mult:.2f}  |  Dutch target profit: ${target_profit:.2f}")
@@ -1423,76 +1454,90 @@ class RaceViewer(tk.Toplevel):
             messagebox.showerror("Results error", f"Could not fetch or apply results:\n{e}")
 
     # ===== Model win% (robust) =====
-    def _compute_model_probs(self, silent=True):
+    def _compute_all_model_probs(self, silent=True, tau=0.4, alpha=0.6):
         """
-        Compute per runner model win probabilities and store in self.model_winp_by_no.
-        Prefers your infer_from_schedule_json pipeline; falls back to market implied
-        (WinTote or WinFx) and then equal split. Sanitises NaNs and renormalises.
+        Compute win% for three models and store as dicts keyed by runner_number:
+        - self.model_winp_by_no_nn
+        - self.model_winp_by_no_reg
+        - self.model_winp_by_no_rank
+
+        NN uses your MC PL sampler.
+        GBM-Rank uses LightGBM ranking scores -> PL.
+        GBM-Reg uses LightGBM regression scores (lower=better) -> flip sign -> PL.
         """
-        self.model_winp_by_no = {}
+        self.model_winp_by_no_nn   = {}
+        self.model_winp_by_no_reg  = {}
+        self.model_winp_by_no_rank = {}
+
         try:
-            # Try your schedule -> DF -> model pipeline if available
-            from infer_from_schedule_json import (
-                fetch_schedule_json,
-                schedule_json_to_df,
-                estimate_position_probs_for_race_df,
-            )
+            # Build race DF used by the model pipelines
             date_str, meetno, raceno = self._results_url_parts()
             if not (date_str and meetno and raceno):
-                raise RuntimeError("missing coords")
-            sched = fetch_schedule_json(date_str, int(meetno), int(raceno))
-            df = schedule_json_to_df(sched)
-            preds = estimate_position_probs_for_race_df(df)  # expects 'runner_number' and 'win_prob'
-            rn = preds.get("runner_number")
-            wp = preds.get("win_prob")
-            if rn is None or wp is None or len(preds) == 0:
-                raise RuntimeError("model returned empty")
+                raise RuntimeError("missing date/meet/race coords")
 
-            import numpy as _np
-            nums = _np.array([safe_int(x, None) for x in rn], dtype=object)
-            probs = _np.array([safe_float(x, None) for x in wp], dtype=float)
-            probs = _np.nan_to_num(probs, nan=0.0, posinf=0.0, neginf=0.0)
-            probs = _np.clip(probs, 0.0, None)
-            s = float(probs.sum())
-            if s <= 0.0:
-                raise RuntimeError("probabilities contain NaN or sum to 0")
-            probs = probs / s
+            sched = _sched_fetch(date_str, int(meetno), int(raceno))
+            df = _sched_to_df(sched)
+            if df is None or df.empty:
+                raise RuntimeError("empty schedule df")
 
-            out = {}
-            for n, p in zip(nums, probs):
-                if n is not None:
-                    out[int(n)] = float(p)
+            # ---------- NN ----------
+            nn_df = _nn_probs_for_df(df, tau=tau, n_samples=4000, alpha_model_weight=alpha)
+            nn_nums  = np.array([safe_int(x, None)   for x in nn_df.get("runner_number")], dtype=object)
+            nn_probs = np.array([safe_float(x, None) for x in nn_df.get("win_prob")],      dtype=float)
 
-            # restrict to visible runners
-            self.model_winp_by_no = {int(r.get("no")): float(out.get(int(r.get("no")), 0.0))
-                                     for r in self.runners if r.get("no") is not None}
-            return
+            # ---------- GBM: Ranking ----------
+            rank_pred   = gbm.load_gbm_and_predict(df, model_name="model_lgbm.txt")
+            rank_scores = np.asarray(rank_pred["score"], dtype=float)          # higher = better
+            rank_win    = gbm._scores_to_pl_win_probs(rank_scores, tau=tau)    # PL top-1 from scores
+            if "implied_p" in df.columns and df["implied_p"].notna().any():
+                rank_win = gbm.blend_with_market(rank_win, df["implied_p"].to_numpy(), alpha=alpha)
+
+            # ---------- GBM: Regression ----------
+            reg_pred   = gbm.load_gbm_and_predict(df, model_name="model_lgbm_reg.txt")
+            # Regression "score": lower predicted finish is better, so flip sign
+            reg_scores = -np.asarray(reg_pred["score"], dtype=float)
+            reg_win    = gbm._scores_to_pl_win_probs(reg_scores, tau=tau)
+            if "implied_p" in df.columns and df["implied_p"].notna().any():
+                reg_win = gbm.blend_with_market(reg_win, df["implied_p"].to_numpy(), alpha=alpha)
+
+            # ---------- Sanitise + map to runner numbers ----------
+            rn_series = df.get("runner_number")
+            nums_iter = rn_series.values if rn_series is not None else []
+            nums = np.array([safe_int(x, None) for x in nums_iter], dtype=object)
+
+            def _clean(vec):
+                v = np.nan_to_num(np.asarray(vec, dtype=float), nan=0.0, posinf=0.0, neginf=0.0)
+                s = float(v.sum())
+                return (v / s) if s > 0 else v
+
+            nn_probs = _clean(nn_probs)
+            rank_win = _clean(rank_win)
+            reg_win  = _clean(reg_win)
+
+            self.model_winp_by_no_nn   = {int(n): float(p) for n, p in zip(nn_nums, nn_probs) if n is not None}
+            self.model_winp_by_no_rank = {int(n): float(p) for n, p in zip(nums,    rank_win) if n is not None}
+            self.model_winp_by_no_reg  = {int(n): float(p) for n, p in zip(nums,    reg_win)  if n is not None}
+
+            # Keep only currently visible runners to stay aligned with the UI
+            visible = [int(r.get("no")) for r in self.runners if r.get("no") is not None]
+            self.model_winp_by_no_nn   = {n: self.model_winp_by_no_nn.get(n, 0.0)   for n in visible}
+            self.model_winp_by_no_reg  = {n: self.model_winp_by_no_reg.get(n, 0.0)  for n in visible}
+            self.model_winp_by_no_rank = {n: self.model_winp_by_no_rank.get(n, 0.0) for n in visible}
+
         except Exception as e:
             if not silent:
-                messagebox.showwarning("Model", f"Model% fallback: {e}")
+                try:
+                    messagebox.showwarning("Models", f"Fell back to equal split: {e}")
+                except Exception:
+                    pass
+            # Equal-split fallback so UI remains functional
+            n = max(1, sum(1 for r in self.runners if r.get("no") is not None))
+            eq = 1.0 / n
+            eq_map = {int(r.get("no")): eq for r in self.runners if r.get("no") is not None}
+            self.model_winp_by_no_nn   = dict(eq_map)
+            self.model_winp_by_no_reg  = dict(eq_map)
+            self.model_winp_by_no_rank = dict(eq_map)
 
-        # Fallback 1: market implied using WinTote if available else WinFx
-        try:
-            vals = []
-            have_any = False
-            for r in self.runners:
-                m = r.get("metrics", {})
-                O = m.get("win_tote") or m.get("win_fx")
-                p = 1.0/float(O) if (O and O > 1.0) else 0.0
-                if p > 0:
-                    have_any = True
-                vals.append((r.get("no"), p))
-            if have_any:
-                tot = sum(v for _, v in vals)
-                if tot > 0:
-                    self.model_winp_by_no = {int(no): (v/tot) for no, v in vals if no is not None}
-                    return
-        except Exception:
-            pass
-
-        # Fallback 2: equal split
-        n = max(1, sum(1 for r in self.runners if r.get("no") is not None))
-        self.model_winp_by_no = {int(r.get("no")): 1.0/n for r in self.runners if r.get("no") is not None}
 
     # ===== Odds refresh =====
     def refresh_odds(self):
@@ -1515,7 +1560,7 @@ class RaceViewer(tk.Toplevel):
                 r["metrics"] = compute_runner_metrics(r, race_cond)
 
             # keep model current after odds update if you like
-            self._compute_model_probs(silent=True)
+            self._compute_all_model_probs(silent=True)
 
             # top table
             self.tree.delete(*self.tree.get_children())
@@ -1545,9 +1590,12 @@ class RaceViewer(tk.Toplevel):
             if hasattr(self, "sig_tree"):
                 self.sig_tree.delete(*self.sig_tree.get_children())
                 for r in self.runners:
-                    m = r.get("metrics", {})
+                    m = r["metrics"]
                     no_i = r.get("no")
-                    model_p = self.model_winp_by_no.get(int(no_i)) if no_i is not None else None
+                    nn_p   = self.model_winp_by_no_nn.get(int(no_i)) if no_i is not None else None
+                    reg_p  = self.model_winp_by_no_reg.get(int(no_i)) if no_i is not None else None
+                    rank_p = self.model_winp_by_no_rank.get(int(no_i)) if no_i is not None else None
+
                     self.sig_tree.insert(
                         "",
                         "end",
@@ -1557,7 +1605,9 @@ class RaceViewer(tk.Toplevel):
                             r.get("name") or "",
                             fmt_price(m.get("win_fx")),
                             fmt_price(m.get("win_tote")),
-                            ("" if model_p is None else f"{model_p*100:.1f}"),
+                            ("" if nn_p   is None else f"{nn_p*100:.1f}"),
+                            ("" if reg_p  is None else f"{reg_p*100:.1f}"),
+                            ("" if rank_p is None else f"{rank_p*100:.1f}"),
                             pct(m.get("imp_win")),
                             pct(m.get("firming_pct")),
                             pct(m.get("ew_overlay_pct")),
@@ -1566,6 +1616,7 @@ class RaceViewer(tk.Toplevel):
                             m.get("edge") or "",
                         ),
                     )
+
 
             # update picks odds
             if hasattr(self, "picks_tree"):
@@ -1648,7 +1699,7 @@ class RaceViewer(tk.Toplevel):
                 r["metrics"] = compute_runner_metrics(r, race_cond)
 
             # Recompute model probabilities (non-fatal)
-            self._compute_model_probs(silent=True)
+            self._compute_all_model_probs(silent=True)
 
             # Refill TOP runners table
             self.tree.delete(*self.tree.get_children())
@@ -1678,18 +1729,24 @@ class RaceViewer(tk.Toplevel):
             if hasattr(self, "sig_tree"):
                 self.sig_tree.delete(*self.sig_tree.get_children())
                 for r in self.runners:
-                    m = r.get("metrics", {})
+                    m = r["metrics"]
                     no_i = r.get("no")
-                    model_p = self.model_winp_by_no.get(int(no_i)) if no_i is not None else None
+                    nn_p   = self.model_winp_by_no_nn.get(int(no_i)) if no_i is not None else None
+                    reg_p  = self.model_winp_by_no_reg.get(int(no_i)) if no_i is not None else None
+                    rank_p = self.model_winp_by_no_rank.get(int(no_i)) if no_i is not None else None
+
                     self.sig_tree.insert(
                         "",
                         "end",
+                        iid=f"r{no_i}",
                         values=(
-                            r.get("no") or "",
+                            no_i or "",
                             r.get("name") or "",
                             fmt_price(m.get("win_fx")),
                             fmt_price(m.get("win_tote")),
-                            ("" if model_p is None else f"{model_p*100:.1f}"),
+                            ("" if nn_p   is None else f"{nn_p*100:.1f}"),
+                            ("" if reg_p  is None else f"{reg_p*100:.1f}"),
+                            ("" if rank_p is None else f"{rank_p*100:.1f}"),
                             pct(m.get("imp_win")),
                             pct(m.get("firming_pct")),
                             pct(m.get("ew_overlay_pct")),
@@ -1698,6 +1755,7 @@ class RaceViewer(tk.Toplevel):
                             m.get("edge") or "",
                         ),
                     )
+
 
             # Update any already-loaded picks with the new WinFx/WinTote
             if hasattr(self, "picks_tree"):
