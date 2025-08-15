@@ -1,519 +1,369 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+"""
+Update dataset with new TAB results, then retrain models.
+
+Changes in this version:
+- PyTorch training now calls the pytorch_pre.py CLI via subprocess instead of
+  expecting a `run_training` symbol. This makes it resilient to repo differences.
+- GBM (LambdaRank + regression) paths are unchanged and still use lgbm_rank.py.
+
+Usage:
+  python update_data_retrain_model.py
+  python update_data_retrain_model.py --retrain
+  python update_data_retrain_model.py --start 2025-08-01 --end 2025-08-14 --retrain
+
+Common flags:
+  --data five_year_dataset.parquet
+  --retrain                       # force retrain even if no new rows
+  --skip-gbm                      # skip GBM retrain
+  --skip-nn                       # skip NN retrain
+
+PyTorch params (forwarded to pytorch_pre.py):
+  --nn-epochs 20 --nn-batch 2048 --nn-lr 1e-3 --nn-wd 1e-4 --nn-dropout 0.25
+  --nn-hidden "256,128,64"
+"""
+
 import argparse
 import json
-import math
 import os
 import pickle
-import random
-from dataclasses import dataclass
-from datetime import datetime
-from typing import Dict, List, Tuple, Optional
+import shutil
+import subprocess
+import sys
+from datetime import datetime, timedelta
+from typing import Optional, Tuple
 
 import numpy as np
 import pandas as pd
-import torch
-from torch import nn
-from torch.utils.data import Dataset, DataLoader
 
-from sklearn.metrics import mean_absolute_error, mean_squared_error
-from scipy.stats import spearmanr
+# ---------------------------
+# Config
+# ---------------------------
+DATA_PATH_DEFAULT = "five_year_dataset.parquet"
 
-# --------------------------
-# Repro
-# --------------------------
-def set_seed(seed: int = 42):
-    random.seed(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed)
+TAB_RESULTS_BASE = "https://json.tab.co.nz/results"  # results/{YYYY-MM-DD}/{meet}/{race}
 
-# --------------------------
-# Config (feature lists)
-# --------------------------
-NUMERIC_COLS_BASE = [
-    "meeting_number", "race_number", "race_distance_m", "stake",
-    "fav_rank", "race_length", "race_number_sched", "entrant_weight",
-]
-FORM_NUMERIC = [
-    "horse_starts_prior", "horse_win_rate_prior", "horse_top3_rate_prior",
-    "horse_avg_finish_prior", "horse_last_finish", "horse_avg_fav_rank_prior",
-    "horse_avg_margin_prior", "days_since_last_run",
-]
-CATEGORICAL_COLS = [
-    "race_class", "race_track", "race_weather",
-    "meeting_country", "meeting_venue", "source_section",
-    "race_class_sched", "entrant_barrier", "entrant_jockey",
-    "runner_name",
-]
+BACKUP_DIR = "backups"
+os.makedirs(BACKUP_DIR, exist_ok=True)
 
-# --------------------------
-# Utilities
-# --------------------------
-def _norm_name(s: str) -> str:
-    return " ".join(str(s).strip().upper().split()) if s is not None else "UNK"
+# For GBM retrain we import the module so we can call train/train_reg directly
+try:
+    import lgbm_rank as _lgbm
+except Exception:
+    _lgbm = None  # We’ll message if GBM is requested but module is missing
 
-def clean_training_rows(df: pd.DataFrame) -> pd.DataFrame:
-    """Drop scratches, incomplete races, and invalid labels (prevents NaNs in eval)."""
-    x = df.copy()
 
-    if "is_scratched" in x.columns:
-        x = x[~x["is_scratched"].fillna(False)]
+# ---------------------------
+# Helpers
+# ---------------------------
 
-    is_complete = None
-    for col in ("status", "race_status"):
-        if col in x.columns:
-            s = x[col].astype(str).str.lower()
-            m = s.eq("complete")
-            is_complete = m if is_complete is None else (is_complete | m)
-    if is_complete is not None:
-        x = x[is_complete]
+def _log(msg: str):
+    print(msg, flush=True)
 
-    x["finish_rank"] = pd.to_numeric(x["finish_rank"], errors="coerce")
-    x = x[x["finish_rank"].notna() & (x["finish_rank"] > 0)]
-    return x
+def load_parquet(path: str) -> pd.DataFrame:
+    _log(f"[LOAD] {path}")
+    return pd.read_parquet(path)
 
-def build_horse_form_features(df: pd.DataFrame) -> pd.DataFrame:
-    """Leak-safe per-horse lagged stats from prior runs."""
-    req = ["runner_name", "date", "finish_rank", "fav_rank", "margin_len"]
-    w = df.copy()
-    for c in req:
-        if c not in w.columns:
-            w[c] = np.nan
+def _to_date(s) -> Optional[datetime.date]:
+    try:
+        return pd.to_datetime(s).date()
+    except Exception:
+        return None
 
-    w["runner_name"] = w["runner_name"].map(_norm_name)
-    w["date"] = pd.to_datetime(w["date"], errors="coerce")
-    w = w.sort_values(["runner_name", "date"]).reset_index()
+def _daterange(start_date, end_date):
+    cur = start_date
+    while cur <= end_date:
+        yield cur
+        cur += timedelta(days=1)
 
-    g = w.groupby("runner_name", sort=False)
-    w["horse_starts_prior"] = g.cumcount()
+def _safe_request_json(url: str):
+    import urllib.request, json as _json
+    with urllib.request.urlopen(url, timeout=25) as resp:
+        data = resp.read()
+    return _json.loads(data.decode("utf-8"))
 
-    w["is_win"] = (w["finish_rank"] == 1).astype(float)
-    w["is_top3"] = (w["finish_rank"] <= 3).astype(float)
-
-    for col in ["is_win", "is_top3", "finish_rank", "fav_rank", "margin_len"]:
-        s = w[col]
-        w[f"cum_{col}_prior"] = g[col].cumsum() - s
-
-    cnt = w["horse_starts_prior"].replace(0, np.nan)
-    w["horse_win_rate_prior"] = w["cum_is_win_prior"] / cnt
-    w["horse_top3_rate_prior"] = w["cum_is_top3_prior"] / cnt
-    w["horse_avg_finish_prior"] = w["cum_finish_rank_prior"] / cnt
-    w["horse_avg_fav_rank_prior"] = w["cum_fav_rank_prior"] / cnt
-    w["horse_avg_margin_prior"] = w["cum_margin_len_prior"] / cnt
-
-    w["horse_last_finish"] = g["finish_rank"].shift(1)
-    last_date = g["date"].shift(1)
-    w["days_since_last_run"] = (w["date"] - last_date).dt.days
-
-    out = w.set_index("index")[
-        [
-            "horse_starts_prior",
-            "horse_win_rate_prior",
-            "horse_top3_rate_prior",
-            "horse_avg_finish_prior",
-            "horse_last_finish",
-            "horse_avg_fav_rank_prior",
-            "horse_avg_margin_prior",
-            "days_since_last_run",
-        ]
-    ].sort_index()
-    return out
-
-# --------------------------
-# Artifacts
-# --------------------------
-@dataclass
-class PreprocessArtifacts:
-    numeric_cols: List[str]
-    categorical_cols: List[str]
-    num_means: Dict[str, float]
-    num_stds: Dict[str, float]
-    cat_maps: Dict[str, Dict[str, int]]          # category -> index (includes "UNK")
-    cat_cardinalities: Dict[str, int]            # for embeddings
-    target_name: str = "finish_rank"
-
-# --------------------------
-# Dataset
-# --------------------------
-class TabularDataset(Dataset):
-    def __init__(self, df: pd.DataFrame, art: PreprocessArtifacts):
-        y = pd.to_numeric(df[art.target_name], errors="coerce").astype(float).values
-
-        # numeric
-        Xn = []
-        for c in art.numeric_cols:
-            col = pd.to_numeric(df[c], errors="coerce").astype(float)
-            col = (col - art.num_means[c]) / (art.num_stds[c] if art.num_stds[c] > 0 else 1.0)
-            Xn.append(col.values)
-        Xn = np.stack(Xn, axis=1).astype(np.float32) if Xn else np.zeros((len(df), 0), np.float32)
-
-        # categorical -> indices (unknown => "UNK")
-        Xc = []
-        for c in art.categorical_cols:
-            m = art.cat_maps[c]
-            vals = df[c].astype(str).fillna("UNK").replace({"nan": "UNK"})
-            if c == "runner_name":
-                vals = vals.map(_norm_name)
-            idx = vals.map(lambda s: m.get(s, m.get("UNK", 0))).astype(np.int64).values
-            Xc.append(idx)
-        Xc = np.stack(Xc, axis=1).astype(np.int64) if Xc else np.zeros((len(df), 0), np.int64)
-
-        self.Xn = torch.from_numpy(Xn)
-        self.Xc = torch.from_numpy(Xc)
-        self.y = torch.from_numpy(y.astype(np.float32))
-
-    def __len__(self):
-        return len(self.y)
-
-    def __getitem__(self, i):
-        return self.Xn[i], self.Xc[i], self.y[i]
-
-# --------------------------
-# Model
-# --------------------------
-class TabularModel(nn.Module):
-    def __init__(self, num_in: int, cat_cardinalities: List[int], hidden: List[int], dropout: float = 0.25):
-        super().__init__()
-        self.has_cat = len(cat_cardinalities) > 0
-        emb_dim = lambda card: min(50, (card + 1) // 2)  # simple rule
-        if self.has_cat:
-            self.embs = nn.ModuleList([nn.Embedding(card, emb_dim(card)) for card in cat_cardinalities])
-            cat_dim = sum(emb_dim(card) for card in cat_cardinalities)
-        else:
-            self.embs = None
-            cat_dim = 0
-
-        layers = []
-        in_dim = num_in + cat_dim
-        for h in hidden:
-            layers += [nn.Linear(in_dim, h), nn.ReLU(), nn.Dropout(dropout)]
-            in_dim = h
-        layers += [nn.Linear(in_dim, 1)]
-        self.mlp = nn.Sequential(*layers)
-
-    def forward(self, x_num: torch.Tensor, x_cat: torch.Tensor):
-        if self.has_cat and x_cat.numel() > 0:
-            embs = [emb(x_cat[:, i]) for i, emb in enumerate(self.embs)]
-            x = torch.cat([x_num] + embs, dim=1)
-        else:
-            x = x_num
-        out = self.mlp(x).squeeze(-1)
-        return out
-
-# --------------------------
-# Prep functions
-# --------------------------
-def build_preprocess(df: pd.DataFrame) -> Tuple[pd.DataFrame, PreprocessArtifacts]:
-    # Form features (leak-safe)
-    form = build_horse_form_features(df)
-    df = pd.concat([df, form], axis=1)
-
-    # Choose features that actually exist
-    numeric_cols = [c for c in (NUMERIC_COLS_BASE + FORM_NUMERIC) if c in df.columns]
-    categorical_cols = [c for c in CATEGORICAL_COLS if c in df.columns]
-
-    # Normalise key names
-    if "runner_name" in df.columns:
-        df["runner_name"] = df["runner_name"].map(_norm_name)
-
-    # Compute numeric stats on TRAIN later; here just return df and placeholders
-    art = PreprocessArtifacts(
-        numeric_cols=numeric_cols,
-        categorical_cols=categorical_cols,
-        num_means={},
-        num_stds={},
-        cat_maps={},
-        cat_cardinalities={}
-    )
-    return df, art
-
-def fit_encoders(train_df: pd.DataFrame, art: PreprocessArtifacts) -> PreprocessArtifacts:
-    # numeric
-    num_means = {c: float(pd.to_numeric(train_df[c], errors="coerce").astype(float).mean()) for c in art.numeric_cols}
-    num_stds  = {c: float(pd.to_numeric(train_df[c], errors="coerce").astype(float).std(ddof=0)) for c in art.numeric_cols}
-
-    # categorical mappings (train only), include UNK
-    cat_maps = {}
-    cat_cards = {}
-    for c in art.categorical_cols:
-        vals = train_df[c].astype(str).fillna("UNK").replace({"nan": "UNK"})
-        if c == "runner_name":
-            vals = vals.map(_norm_name)
-        uniq = ["UNK"] + sorted(set(vals) - {"UNK"})
-        mapping = {v: i for i, v in enumerate(uniq)}
-        cat_maps[c] = mapping
-        cat_cards[c] = len(mapping)
-
-    return PreprocessArtifacts(
-        numeric_cols=art.numeric_cols,
-        categorical_cols=art.categorical_cols,
-        num_means=num_means,
-        num_stds=num_stds,
-        cat_maps=cat_maps,
-        cat_cardinalities=cat_cards,
-        target_name=art.target_name
-    )
-
-def make_splits(df: pd.DataFrame, art: PreprocessArtifacts, seed: int = 42):
-    # ensure date
-    df["date"] = pd.to_datetime(df["date"], errors="coerce")
-    df = df.sort_values(["date", "race_id"]).reset_index(drop=True)
-
-    n = len(df)
-    i_tr = int(0.70 * n)
-    i_va = int(0.85 * n)
-    train_df = df.iloc[:i_tr].copy()
-    valid_df = df.iloc[i_tr:i_va].copy()
-    test_df  = df.iloc[i_va:].copy()
-
-    # fit stats on TRAIN only
-    art = fit_encoders(train_df, art)
-
-    return train_df, valid_df, test_df, art
-
-# --------------------------
-# Train / Eval
-# --------------------------
-def evaluate(model, loader, criterion, device):
-    model.eval()
-    losses, preds_all, targs_all = [], [], []
-    with torch.no_grad():
-        for xb_num, xb_cat, yb in loader:
-            xb_num = xb_num.to(device)
-            xb_cat = xb_cat.to(device)
-            yb = yb.to(device)
-            out = model(xb_num, xb_cat)
-            loss = criterion(out, yb)
-            losses.append(loss.item())
-            preds_all.append(out.detach().cpu().numpy().ravel())
-            targs_all.append(yb.detach().cpu().numpy().ravel())
-
-    preds = np.concatenate(preds_all).astype(float) if preds_all else np.array([])
-    targs = np.concatenate(targs_all).astype(float) if targs_all else np.array([])
-
-    # mask non-finite (prevents sklearn crash)
-    mask = np.isfinite(preds) & np.isfinite(targs)
-    if mask.sum() == 0:
-        return float(np.mean(losses) if losses else math.nan), math.nan, math.nan, math.nan
-
-    preds_m = preds[mask]
-    targs_m = targs[mask]
-
-    mae = float(mean_absolute_error(targs_m, preds_m))
-    rmse = float(np.sqrt(mean_squared_error(targs_m, preds_m)))
-    rho = float(spearmanr(targs_m, preds_m).correlation)
-    return float(np.mean(losses)), mae, rmse, rho
-
-def train_model(train_ds, valid_ds, art: PreprocessArtifacts,
-                hidden: List[int], dropout: float, lr: float,
-                weight_decay: float, epochs: int, batch_size: int,
-                device: str = "cpu", patience: int = 5):
-
-    train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True, num_workers=0)
-    valid_loader = DataLoader(valid_ds, batch_size=batch_size*2, shuffle=False, num_workers=0)
-
-    num_in = len(art.numeric_cols)
-    cat_cards = [art.cat_cardinalities[c] for c in art.categorical_cols]
-    model = TabularModel(num_in=num_in, cat_cardinalities=cat_cards, hidden=hidden, dropout=dropout).to(device)
-
-    criterion = nn.MSELoss()
-    optim = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
-
-    best_val = math.inf
-    best_state = None
-    patience_left = patience
-
-    for ep in range(1, epochs + 1):
-        model.train()
-        tr_losses = []
-        for xb_num, xb_cat, yb in train_loader:
-            xb_num = xb_num.to(device)
-            xb_cat = xb_cat.to(device)
-            yb = yb.to(device)
-            optim.zero_grad()
-            out = model(xb_num, xb_cat)
-            loss = criterion(out, yb)
-            loss.backward()
-            optim.step()
-            tr_losses.append(loss.item())
-
-        # eval
-        train_loss = float(np.mean(tr_losses)) if tr_losses else math.nan
-        val_loss, val_mae, val_rmse, val_spear = evaluate(model, valid_loader, criterion, device)
-
-        print(f"Epoch {ep:03d} | train_loss={train_loss:.4f} val_loss={val_loss:.4f} "
-              f"val_mae={val_mae:.4f} val_rmse={val_rmse:.4f} val_spearman={val_spear:.4f}")
-
-        # early stopping on val_loss
-        if val_loss < best_val - 1e-4:
-            best_val = val_loss
-            best_state = {k: v.cpu().clone() for k, v in model.state_dict().items()}
-            patience_left = patience
-        else:
-            patience_left -= 1
-            if patience_left <= 0:
-                print("Early stopping.")
-                break
-
-    if best_state is not None:
-        model.load_state_dict(best_state)
-
-    return model
-
-# --------------------------
-# End-to-end train
-# --------------------------
-def run_training(data_path: str,
-                 hidden: List[int], dropout: float,
-                 lr: float, weight_decay: float,
-                 epochs: int, batch_size: int,
-                 device: Optional[str] = None):
-
-    set_seed(42)
-    device = device or ("cuda" if torch.cuda.is_available() else "cpu")
-
-    # Load data
-    df = pd.read_parquet(data_path)
-
-    # Clean rows to avoid NaNs in targets
-    df = clean_training_rows(df)
-
-    # Build features + lists
-    df, art = build_preprocess(df)
-
-    # Keep only what we need
-    needed = ["date", "race_id", "finish_rank"] + art.numeric_cols + art.categorical_cols
-    df = df[needed].copy()
-
-    # Splits + fit stats/mappings
-    train_df, valid_df, test_df, art = make_splits(df, art)
-
-    # Datasets
-    train_ds = TabularDataset(train_df, art)
-    valid_ds = TabularDataset(valid_df, art)
-    test_ds  = TabularDataset(test_df, art)
-
-    # Train
-    model = train_model(train_ds, valid_ds, art, hidden, dropout, lr, weight_decay, epochs, batch_size, device)
-
-    # Final eval
-    crit = nn.MSELoss()
-    test_loader = DataLoader(test_ds, batch_size=batch_size*2, shuffle=False)
-    test_loss, test_mae, test_rmse, test_spear = evaluate(model, test_loader, crit, device)
-    print(f"TEST | loss={test_loss:.4f} MAE={test_mae:.4f} RMSE={test_rmse:.4f} Spearman={test_spear:.4f}")
-
-    # Save artifacts
-    os.makedirs("artifacts", exist_ok=True)
-    model_path = "model_regression.pth"
-    torch.save(model.state_dict(), model_path)
-
-    with open("preprocess.pkl", "wb") as f:
-        pickle.dump(art, f)
-
-    with open("metrics.json", "w") as f:
-        json.dump({
-            "test_loss": float(test_loss),
-            "test_mae": float(test_mae),
-            "test_rmse": float(test_rmse),
-            "test_spearman": float(test_spear),
-            "numeric_cols": art.numeric_cols,
-            "categorical_cols": art.categorical_cols
-        }, f, indent=2)
-
-    return model, art
-
-# --------------------------
-# Inference helper
-# --------------------------
-def _prepare_new_frame(df_new: pd.DataFrame, art: PreprocessArtifacts) -> TabularDataset:
-    """Prepare an arbitrary race dataframe for inference using saved artifacts."""
-    # Ensure required columns exist
-    work = df_new.copy()
-    if "runner_name" in work.columns:
-        work["runner_name"] = work["runner_name"].map(_norm_name)
-
-    # Add missing columns
-    for c in art.numeric_cols:
-        if c not in work.columns:
-            work[c] = np.nan
-    for c in art.categorical_cols:
-        if c not in work.columns:
-            work[c] = "UNK"
-
-    # Dummy target if missing
-    if art.target_name not in work.columns:
-        work[art.target_name] = np.nan
-
-    return TabularDataset(work, art)
-
-def load_model_and_predict(df_new: pd.DataFrame,
-                           model_path: str = "model_regression.pth",
-                           preprocess_path: str = "preprocess.pkl",
-                           hidden: List[int] = [256, 128, 64],
-                           dropout: float = 0.25,
-                           device: Optional[str] = None) -> pd.DataFrame:
+def _extract_rows_from_results_payload(obj: dict) -> pd.DataFrame:
     """
-    Load saved model + preprocess and return DataFrame with prediction + predicted rank.
+    Flatten results JSON into rows of runners with finish info.
+    We only need a subset of columns; extra columns are harmless.
     """
-    device = device or ("cuda" if torch.cuda.is_available() else "cpu")
+    rows = []
+    date = obj.get("date") or obj.get("day") or obj.get("meetingDate")
+    meetings = obj.get("meetings") or []
+    for m in meetings:
+        meeting_id = m.get("id") or m.get("meetingId")
+        meeting_number = m.get("number") or m.get("meetingNumber")
+        meeting_country = m.get("country")
+        meeting_venue = m.get("venue") or m.get("meetingName")
 
-    with open(preprocess_path, "rb") as f:
-        art: PreprocessArtifacts = pickle.load(f)
+        for r in (m.get("races") or []):
+            race_id = r.get("id") or r.get("raceId")
+            race_number = r.get("number") or r.get("raceNumber")
+            race_class = r.get("class")
+            race_track = r.get("track") or r.get("trackCondition")
+            race_weather = r.get("weather")
+            race_name = r.get("name") or r.get("raceName")
+            length_m = r.get("length") or r.get("distanceMeters")
+            try:
+                race_distance_m = float(length_m) if length_m not in (None, "") else np.nan
+            except Exception:
+                race_distance_m = np.nan
 
-    num_in = len(art.numeric_cols)
-    cat_cards = [art.cat_cardinalities[c] for c in art.categorical_cols]
-    model = TabularModel(num_in=num_in, cat_cardinalities=cat_cards, hidden=hidden, dropout=dropout).to(device)
+            # placings can be in explicit list or embedded per-runner
+            placings_map = {}
+            for p in (r.get("placings") or []):
+                try:
+                    num = int(p.get("number"))
+                    rank = int(p.get("rank"))
+                    placings_map[num] = rank
+                except Exception:
+                    pass
 
-    state = torch.load(model_path, map_location=device)
-    model.load_state_dict(state)
-    model.eval()
+            entries = r.get("entries") or r.get("runners") or []
+            for e in entries:
+                scr = e.get("scr") or e.get("scratched") or e.get("isScratched")
+                if scr:
+                    continue
+                try:
+                    runner_no = int(e.get("number") or e.get("runnerNumber") or e.get("runner_number"))
+                except Exception:
+                    runner_no = None
+                # rank: prefer placings map; else e.get("placing"/"position")
+                rank = placings_map.get(runner_no)
+                if rank is None:
+                    for k in ("placing", "position", "finish"):
+                        v = e.get(k)
+                        try:
+                            if v is not None:
+                                rank = int(v)
+                                break
+                        except Exception:
+                            pass
 
-    ds = _prepare_new_frame(df_new, art)
-    loader = DataLoader(ds, batch_size=512, shuffle=False)
+                rows.append({
+                    "date": date,
+                    "meeting_id": meeting_id,
+                    "meeting_number": meeting_number,
+                    "meeting_country": meeting_country,
+                    "meeting_venue": meeting_venue,
+                    "race_id": race_id,
+                    "race_name": race_name,
+                    "race_number": race_number,
+                    "race_class": race_class,
+                    "race_track": race_track,
+                    "race_weather": race_weather,
+                    "race_distance_m": race_distance_m,
+                    "runner_number": runner_no,
+                    "runner_name": (e.get("name") or e.get("runnerName") or "").strip(),
+                    "finish_rank": (rank if rank is not None else np.nan),
+                    "is_scratched": False,
+                    # a few extra model-side fields if you use them
+                    "fav_rank": np.nan,
+                    "stake": np.nan,
+                    "race_length": race_distance_m,
+                    "race_number_sched": race_number,
+                    "entrant_weight": np.nan,
+                    "race_class_sched": race_class,
+                    "entrant_barrier": str(e.get("barrier") or e.get("draw") or "") or "UNK",
+                    "entrant_jockey": e.get("jockey") or e.get("jockeyName") or "UNK",
+                    "source_section": "results",
+                })
+    return pd.DataFrame(rows)
 
-    preds = []
-    with torch.no_grad():
-        for xb_num, xb_cat, _ in loader:
-            xb_num = xb_num.to(device)
-            xb_cat = xb_cat.to(device)
-            out = model(xb_num, xb_cat)
-            preds.append(out.detach().cpu().numpy().ravel())
-    preds = np.concatenate(preds).astype(float) if preds else np.array([])
+def _to_bool_mask_any(s: pd.Series) -> pd.Series:
+    """Coerce any 'is_scratched' flavour to clean booleans."""
+    if s.dtype == bool or pd.api.types.is_bool_dtype(s):
+        return s.fillna(False)
+    if pd.api.types.is_numeric_dtype(s):
+        return s.fillna(0).astype(int).astype(bool)
+    # strings/object: true/1/yes/y => True
+    return s.astype(str).str.strip().str.lower().isin({"true","t","1","yes","y"})
 
-    # smaller predicted finish is better; derive ranks (1 = best)
-    pred_rank = preds.argsort().argsort() + 1
 
-    out = df_new.copy()
-    out["predicted_finish"] = preds
-    out["pred_rank"] = pred_rank
-    return out
+def fetch_missing_dates_and_append(df: pd.DataFrame,
+                                   start_date: Optional[str],
+                                   end_date: Optional[str]) -> Tuple[pd.DataFrame, int]:
+    # Determine covered dates
+    have_dates = pd.to_datetime(df["date"], errors="coerce").dt.date.dropna().unique()
+    if len(have_dates) == 0:
+        min_have = None
+        max_have = None
+    else:
+        min_have = min(have_dates)
+        max_have = max(have_dates)
 
-# --------------------------
+    # Work out target window
+    today_nz = datetime.now().date()
+    default_start = (max_have + timedelta(days=1)) if max_have else (today_nz - timedelta(days=7))
+    default_end = today_nz - timedelta(days=1)
+
+    s = _to_date(start_date) or default_start
+    e = _to_date(end_date) or default_end
+
+    if s is None or e is None or s > e:
+        _log(f"[SYNC] No missing dates. (start {s} > end {e})")
+        return df, 0
+
+    # Skip if our latest in data is already beyond e
+    if max_have and max_have >= e:
+        _log(f"[SYNC] No missing dates. (start {s} > end {e})")
+        return df, 0
+
+    _log(f"[FETCH] Missing dates: {s} … {e}")
+
+    new_frames = []
+    total_new = 0
+    for d in _daterange(s, e):
+        date_str = d.strftime("%Y-%m-%d")
+        try:
+            url = f"{TAB_RESULTS_BASE}/{date_str}"
+            obj = _safe_request_json(url)
+            df_day = _extract_rows_from_results_payload(obj)
+            if not df_day.empty:
+                _log(f"  - {date_str} … {len(df_day)} rows")
+                new_frames.append(df_day)
+                total_new += len(df_day)
+        except Exception as ex:
+            _log(f"  ! {date_str} fetch failed: {ex}")
+
+    if not new_frames:
+        _log("[APPEND] No new rows to append.")
+        return df, 0
+
+    # Backup original
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    bkp = os.path.join(BACKUP_DIR, f"five_year_dataset_{ts}.parquet")
+    shutil.copy2(DATA_PATH_DEFAULT, bkp)
+    _log(f"[BACKUP] Saved original to {bkp}")
+
+    # Append + save
+    df_new = pd.concat([df] + new_frames, ignore_index=True)
+    df_new.to_parquet(DATA_PATH_DEFAULT, index=False)
+    _log(f"[SAVE] Appended {total_new} rows. New total: {len(df_new)}")
+
+    return df_new, total_new
+
+
+# ---------------------------
+# Training wrappers
+# ---------------------------
+
+def train_gbm():
+    if _lgbm is None:
+        _log("[GBM] lgbm_rank.py not importable; skipping GBM.")
+        return
+    _log("\n[TRAIN] LightGBM LambdaRank …")
+    _lgbm.train()
+    _log("\n[TRAIN] LightGBM Regression …")
+    _lgbm.train_reg()
+
+def train_pytorch_via_cli(
+    data_path: str,
+    epochs: int,
+    batch_size: int,
+    lr: float,
+    weight_decay: float,
+    dropout: float,
+    hidden: str,
+):
+    """
+    Call pytorch_pre.py as a script so we don't rely on a specific exported API.
+    Equivalent to:
+      python pytorch_pre.py --data ... --epochs ... --batch_size ... --lr ... --weight_decay ... --dropout ... --hidden ...
+    """
+    _log("\n[TRAIN] PyTorch NN …")
+    # Find the script next to this file or in PYTHONPATH
+    script_candidates = [
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "pytorch_pre.py"),
+        "pytorch_pre.py",
+    ]
+    script = None
+    for c in script_candidates:
+        if os.path.exists(c):
+            script = c
+            break
+    if script is None:
+        _log("[NN] Could not find pytorch_pre.py; skipping NN retrain.")
+        return
+
+    cmd = [
+        sys.executable, script,
+        "--data", data_path,
+        "--epochs", str(epochs),
+        "--batch_size", str(batch_size),
+        "--lr", str(lr),
+        "--weight_decay", str(weight_decay),
+        "--dropout", str(dropout),
+        "--hidden", hidden,
+    ]
+    _log(f"[NN] Running: {' '.join(cmd)}")
+    try:
+        subprocess.run(cmd, check=True)
+    except subprocess.CalledProcessError as e:
+        _log(f"[NN] Training failed (exit {e.returncode}). See output above.")
+
+
+# ---------------------------
 # CLI
-# --------------------------
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--data", default="five_year_dataset.parquet")
-    parser.add_argument("--epochs", type=int, default=20)
-    parser.add_argument("--batch_size", type=int, default=2048)
-    parser.add_argument("--lr", type=float, default=1e-3)
-    parser.add_argument("--weight_decay", type=float, default=1e-4)
-    parser.add_argument("--dropout", type=float, default=0.25)
-    parser.add_argument("--hidden", type=str, default="256,128,64", help="comma-separated hidden sizes")
-    args = parser.parse_args()
+# ---------------------------
 
-    hidden = [int(x) for x in args.hidden.split(",") if x.strip()]
-    run_training(
-        data_path=args.data,
-        hidden=hidden,
-        dropout=args.dropout,
-        lr=args.lr,
-        weight_decay=args.weight_decay,
-        epochs=args.epochs,
-        batch_size=args.batch_size
-    )
+def main():
+    p = argparse.ArgumentParser()
+    p.add_argument("--data", default=DATA_PATH_DEFAULT)
+
+    # Optional explicit window; default is: (max_date_in_data+1) .. (today-1)
+    p.add_argument("--start", help="Start date YYYY-MM-DD (results)", default=None)
+    p.add_argument("--end", help="End date YYYY-MM-DD (results)", default=None)
+
+    # Control retrain
+    p.add_argument("--retrain", action="store_true", help="Retrain even if no new rows")
+    p.add_argument("--skip-gbm", action="store_true")
+    p.add_argument("--skip-nn", action="store_true")
+
+    # PyTorch hyperparams (forwarded to pytorch_pre.py)
+    p.add_argument("--nn-epochs", type=int, default=20)
+    p.add_argument("--nn-batch", type=int, default=2048)
+    p.add_argument("--nn-lr", type=float, default=1e-3)
+    p.add_argument("--nn-wd", type=float, default=1e-4)
+    p.add_argument("--nn-dropout", type=float, default=0.25)
+    p.add_argument("--nn-hidden", type=str, default="256,128,64")
+
+    args = p.parse_args()
+
+    # Load
+    if not os.path.exists(args.data):
+        sys.exit(f"Dataset not found: {args.data}")
+    df = load_parquet(args.data)
+
+    # Sync new results
+    df, added = fetch_missing_dates_and_append(df, args.start, args.end)
+    if added == 0 and not args.retrain:
+        _log("\n[SKIP] No new data and --retrain not set. Skipping retrain.")
+        return
+
+    data_path = args.data
+
+    # Retrain GBM
+    if not args.skip_gbm:
+        train_gbm()
+    else:
+        _log("[SKIP] GBM retrain skipped by flag.")
+
+    # Retrain NN (PyTorch) via CLI wrapper
+    if not args.skip_nn:
+        train_pytorch_via_cli(
+            data_path=data_path,
+            epochs=args.nn_epochs,
+            batch_size=args.nn_batch,
+            lr=args.nn_lr,
+            weight_decay=args.nn_wd,
+            dropout=args.nn_dropout,
+            hidden=args.nn_hidden,
+        )
+    else:
+        _log("[SKIP] NN retrain skipped by flag.")
 
 if __name__ == "__main__":
     main()

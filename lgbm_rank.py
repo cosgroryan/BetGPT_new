@@ -38,6 +38,39 @@ import pandas as pd
 import lightgbm as lgb
 from scipy.stats import spearmanr
 from sklearn.preprocessing import OrdinalEncoder
+import sys
+
+
+# add near the top
+import subprocess, pathlib
+
+def train_pytorch_nn_cli(data_path, epochs, batch, lr, weight_decay, dropout, hidden):
+    # resolve pytorch_pre.py next to this script
+    script = pathlib.Path(__file__).with_name("pytorch_pre.py")
+    if not script.exists():
+        raise RuntimeError(f"Couldn't find pytorch_pre.py at {script}")
+    cmd = [
+        sys.executable, str(script),
+        "--data", data_path,
+        "--epochs", str(epochs),
+        "--batch_size", str(batch),
+        "--lr", str(lr),
+        "--weight_decay", str(weight_decay),
+        "--dropout", str(dropout),
+        "--hidden", ",".join(map(str, hidden)),
+    ]
+    print("\n[TRAIN] PyTorch NN via CLI …")
+    subprocess.run(cmd, check=True)
+
+def _to_bool_mask_any(s: pd.Series) -> pd.Series:
+    """Coerce any 'is_scratched' flavour to clean booleans."""
+    if pd.api.types.is_bool_dtype(s):
+        return s.fillna(False)
+    if pd.api.types.is_numeric_dtype(s):
+        return s.fillna(0).astype(int).astype(bool)
+    # strings/object: true/1/yes/y -> True
+    return s.astype(str).str.strip().str.lower().isin({"true","t","1","yes","y"})
+
 
 # -----------------------------
 # Config
@@ -202,7 +235,9 @@ def _prep_for_training():
 
     # Basic filters / checks
     if "is_scratched" in df.columns:
-        df = df[~df["is_scratched"].fillna(False)]
+        mask_scr = _to_bool_mask_any(df["is_scratched"])
+        df = df[~mask_scr]
+
     for need in ["finish_rank", "race_id", "date"]:
         if need not in df.columns:
             raise ValueError(f"Training requires '{need}' in the dataset.")

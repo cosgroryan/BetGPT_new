@@ -38,6 +38,18 @@ from scipy.stats import spearmanr
 from sklearn.metrics import mean_absolute_error, mean_squared_error
 from sklearn.preprocessing import StandardScaler
 from torch.utils.data import DataLoader, Dataset
+import pandas as pd
+import numpy as np
+
+def _to_bool_mask_any(s: pd.Series) -> pd.Series:
+    """Coerce any 'is_scratched' flavour to clean booleans."""
+    if s.dtype == bool or pd.api.types.is_bool_dtype(s):
+        return s.fillna(False)
+    if pd.api.types.is_numeric_dtype(s):
+        return s.fillna(0).astype(int).astype(bool)
+    # strings/object: true/1/yes/y => True
+    return s.astype(str).str.strip().str.lower().isin({"true","t","1","yes","y"})
+
 
 # Repro
 SEED = 42
@@ -264,32 +276,38 @@ def train_one_epoch(model, loader, criterion, optimiser, device):
     return running / len(loader.dataset)
 
 
+# --- replace your evaluate() with this ---
 def evaluate(model, loader, criterion, device):
     model.eval()
-    running = 0.0
-    all_preds, all_targets = [], []
+    losses, preds_all, targs_all = [], [], []
     with torch.no_grad():
-        for x_num, x_cat, y in loader:
-            x_num = x_num.to(device)
-            x_cat = x_cat.to(device)
-            y = y.to(device)
-            preds = model(x_num, x_cat)
-            loss = criterion(preds, y)
-            running += loss.item() * y.size(0)
-            all_preds.append(preds.cpu().numpy().ravel())
-            all_targets.append(y.cpu().numpy().ravel())
-    avg_loss = running / len(loader.dataset)
-    preds = np.concatenate(all_preds)
-    targets = np.concatenate(all_targets)
-    mae = float(mean_absolute_error(targets, preds))
-    rmse = float(math.sqrt(mean_squared_error(targets, preds)))
-    try:
-        rho, _ = spearmanr(targets, preds)
-        spearman = float(rho)
-    except Exception:
-        spearman = float("nan")
-    return avg_loss, mae, rmse, spearman
+        for xb_num, xb_cat, yb in loader:
+            xb_num = xb_num.to(device)
+            xb_cat = xb_cat.to(device)
+            yb = yb.to(device)
+            out = model(xb_num, xb_cat)
+            loss = criterion(out, yb)
+            losses.append(loss.item())
+            preds_all.append(out.detach().cpu().numpy().ravel())
+            targs_all.append(yb.detach().cpu().numpy().ravel())
 
+    preds = np.concatenate(preds_all).astype(float) if preds_all else np.array([])
+    targs = np.concatenate(targs_all).astype(float) if targs_all else np.array([])
+
+    # mask non-finite to avoid sklearn crashes
+    mask = np.isfinite(preds) & np.isfinite(targs)
+    if mask.sum() == 0:
+        # return averages/NaNs gracefully
+        avg_loss = float(np.mean(losses)) if losses else math.nan
+        return avg_loss, math.nan, math.nan, math.nan
+
+    preds_m = preds[mask]
+    targs_m = targs[mask]
+
+    mae = float(mean_absolute_error(targs_m, preds_m))
+    rmse = float(np.sqrt(mean_squared_error(targs_m, preds_m)))
+    rho = float(spearmanr(targs_m, preds_m).correlation)
+    return float(np.mean(losses)), mae, rmse, rho
 
 # -----------------------------
 # Main
@@ -329,7 +347,9 @@ def main():
 
     # Filter scratches
     if "is_scratched" in df.columns:
-        df = df[~df["is_scratched"].fillna(False)]
+        scr_mask = _to_bool_mask_any(df["is_scratched"])
+        df = df[~scr_mask]
+
 
     # Ensure date for chronological split + form
     if "date" not in df.columns:
@@ -431,6 +451,17 @@ def main():
     train_loader = DataLoader(ds_train, batch_size=args.batch_size, shuffle=True, num_workers=0)
     val_loader   = DataLoader(ds_val,   batch_size=args.batch_size, shuffle=False, num_workers=0)
     test_loader  = DataLoader(ds_test,  batch_size=args.batch_size, shuffle=False, num_workers=0)
+
+    # right before calling evaluate() on test_loader
+    # (only for debugging)
+    # count NaNs/Infs in y
+    ys = []
+    for *_x, yb in test_loader:
+        ys.append(yb.numpy().ravel())
+    ys = np.concatenate(ys) if ys else np.array([])
+    print(f"[DEBUG] test y bad count:",
+        np.count_nonzero(~np.isfinite(ys)))
+    
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 

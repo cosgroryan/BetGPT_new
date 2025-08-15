@@ -711,7 +711,7 @@ def select_dutch_picks_from_payload(payload, max_picks: int):
         # same scoring as Recommend picks (overlay + firming + tiny edge bonus)
         overlay = (m.get("ew_overlay_pct") or 0.0)
         firm = m.get("firming_pct")
-        firm_adj = -999 if firm is None else -firm   # prefer firming
+        firm_adj = 0 if firm is None else firm   # prefer firming
         edge_bonus = 0.05 if m.get("edge") else 0.0
         score = overlay * 2.0 + firm_adj * 0.2 + edge_bonus
         scored.append((score, r, m))
@@ -1273,7 +1273,7 @@ class RaceViewer(tk.Toplevel):
 
             overlay = m.get("ew_overlay_pct") or 0.0
             firm = m.get("firming_pct")
-            firm_adj = 0.0 if firm is None else -firm
+            firm_adj = 0.0 if firm is None else firm
             edge_bonus = 0.05 if m.get("edge") else 0.0
 
             # small bonus for higher model probability if available
@@ -1286,7 +1286,7 @@ class RaceViewer(tk.Toplevel):
                     self.model_winp_by_no_reg.get(no_i, 0.0),
                     self.model_winp_by_no_rank.get(no_i, 0.0),
                 ])
-                model_bonus = mp * 0.5
+                model_bonus = mp * 1.0
 
 
             score = overlay * 2.0 + firm_adj * 0.2 + edge_bonus + model_bonus
@@ -2307,12 +2307,12 @@ class RacingGUI(tk.Tk):
                 tmp = []
                 for r, m, O, _vr, _kelly in cand:
                     firm = m.get("firming_pct")
-                    firm_adj = 0.0 if firm is None else -firm
+                    firm_adj = 0.0 if firm is None else firm
                     edge_bonus = 0.05 if m.get("edge") else 0.0
                     overlay = m.get("ew_overlay_pct") or 0.0
                     score = overlay * 2.0 + firm_adj * 0.2 + edge_bonus
                     tmp.append((score, r, m, O))
-                tmp.sort(key=lambda t: (t[0], -1.0 / t[3] if t[3] else 0.0), reverse=True)
+                tmp.sort(key=lambda t: (-t[0], t[3] if t[3] else float("inf")))
                 filtered = [(r, m, O, m.get("kelly_pct1x") or 0.0) for (score, r, m, O) in tmp]
                 lines.append("  (no picks met Min Kelly%; fell back to best scores/shortest odds)")
 
