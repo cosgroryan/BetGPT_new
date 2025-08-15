@@ -1946,7 +1946,7 @@ class RacingGUI(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("TAB NZ affiliates helper")
-        self.geometry("1180x820")
+        self.geometry("1400x820")
 
         self.session = make_session()
 
@@ -2558,7 +2558,7 @@ class RacingGUI(tk.Tk):
 
     # ---------- actions ----------
     def on_fetch_meetings(self):
-        date_str = self.date_var.get().strip()
+        date_str = (self.date_var.get() or "").strip()
         if not date_str:
             messagebox.showwarning("Missing date", "Please enter a date in YYYY-MM-DD format.")
             return
@@ -2581,6 +2581,11 @@ class RacingGUI(tk.Tk):
             self.set_status("No meetings found")
             return
 
+        # ✅ Sort by meet number: prefer tote_meeting_number, then number, then meet_no
+        def _meetno(m):
+            return safe_int(m.get("tote_meeting_number") or m.get("number") or m.get("meet_no"), 999)
+        meetings.sort(key=_meetno)
+
         values = []
         self.meeting_display_to_id.clear()
         for m in meetings:
@@ -2599,11 +2604,12 @@ class RacingGUI(tk.Tk):
             if mid:
                 self.meeting_display_to_id[disp] = mid
 
-
         self.meeting_combo["values"] = values
         if values:
             self.meeting_combo.current(0)
         self.set_status(f"Loaded {len(values)} meetings")
+
+
 
     def on_load_races(self):
         disp = self.meeting_var.get().strip()
@@ -2634,7 +2640,7 @@ class RacingGUI(tk.Tk):
             self.set_status("No races found")
             return
 
-       # Populate table. Clear first.
+    # Populate table. Clear first.
         self.tree.delete(*self.tree.get_children())
 
         for rc in mtgs[0]["races"]:
