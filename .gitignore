@@ -12,7 +12,6 @@ __pycache__/
 *.pyc
 
 # large data and artefacts
-*.parquet
 *.ndjson
 *.bin
 
