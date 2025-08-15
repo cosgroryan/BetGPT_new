@@ -1,0 +1,577 @@
+LGBM Regression DaySlip — 2025-08-16  (meets: 2, 4, 11, 12, 14, 15, 16, 18, 21, 22, 23, 24, 25, 26, 27, 28, 29)
+Ruakaka  R1: 1) KISZKAH* (#14 — Samantha Collett)
+Ruakaka  R1: 2) LOOSE CHANGE (#3 — Matthew Cameron)
+Ruakaka  R1: 3) ANOTHER DESTINY (#4 — Bailey Rogerson)
+
+Ruakaka  R2: 1) SAILOR SAM* (#15 — Samantha Collett)
+Ruakaka  R2: 2) BEAU LUCA* (#5 — Tayla Mitchell)
+Ruakaka  R2: 3) BELLA VINDA (#16 — Joe Nishizuka)
+
+Ruakaka  R3: 1) TOMOE GOZEN (#8 — Niranjan Parmar)
+Ruakaka  R3: 2) DOMAIN ACE (#2 — Bailey Rogerson)
+Ruakaka  R3: 3) NOTABADBERGS (#6 — Masa Hashizume)
+
+Ruakaka  R4: 1) FLYING GIB (#7 — Tayla Mitchell)
+Ruakaka  R4: 2) BOSCH (#5 — Samantha Collett)
+Ruakaka  R4: 3) HABANA** (#1 — Warren Kennedy)
+
+Ruakaka  R5: 1) SWERVE (#7 — Vinnie Colgan)
+Ruakaka  R5: 2) COMMANDING ASPECT (#12 — Masa Hashizume)
+Ruakaka  R5: 3) FERNANDEZ* (#6 — Jack Taplin)
+
+Ruakaka  R6: 1) TAJANA (#4 — Wiremu Pinn)
+Ruakaka  R6: 2) PROSPER (#9 — Matthew Cameron)
+Ruakaka  R6: 3) MISS MOET ALL (#8 — Masa Hashizume)
+
+Ruakaka  R7: 1) LEITRIM LAD* (#1 — Floor Moerman)
+Ruakaka  R7: 2) I'M LULU* (#4 — Joe Doyle)
+Ruakaka  R7: 3) TEXAS* (#6 — Masa Hashizume)
+
+Ruakaka  R8: 1) SANTA CATALINA (#7 — Matthew Cameron)
+Ruakaka  R8: 2) ELECTRIC DREAM (#9 — Floor Moerman)
+Ruakaka  R8: 3) GAMEPLAY* (#4 — Vinnie Colgan)
+
+=========
+
+New Plymouth  R1: 1) CHAJABA* (#2 — Elle Sole)
+New Plymouth  R1: 2) LADIES MAN** (#1 — Frankie Barrett)
+New Plymouth  R1: 3) TAVIS COURT* (#3 — Kate Hercock)
+
+New Plymouth  R2: 1) RIDGEVIEW VICKY* (#6 — Maria Sanson)
+New Plymouth  R2: 2) VIOLETSRBLUE* (#7 — Elle Sole)
+New Plymouth  R2: 3) FOOTLOOSE (#1 — Toni Davies)
+
+New Plymouth  R3: 1) POWEROFPERSUASION* (#3 — Liam Kauri)
+New Plymouth  R3: 2) ALMACETA* (#7 — Elen Nicholas)
+New Plymouth  R3: 3) BELLA TIMING** (#2 — Frankie Barrett)
+
+New Plymouth  R4: 1) KING KHAN* (#5 — Liam Kauri)
+New Plymouth  R4: 2) IN A PICKLE (#7 — Kate Hercock)
+New Plymouth  R4: 3) PICK OF THE LITTER* (#6 — Kelly Myers)
+
+New Plymouth  R5: 1) EAGLE ROCK (#2 — Lynsey Satherley)
+New Plymouth  R5: 2) O'CEIRINS BELLE* (#8 — Kelly Myers)
+New Plymouth  R5: 3) ANOTHER WON'T HURT** (#1 — Kate Hercock)
+
+New Plymouth  R6: 1) JUST A TIPPLE* (#2 — Liam Kauri)
+New Plymouth  R6: 2) TOR MENT TOR* (#7 — Jim Chung)
+New Plymouth  R6: 3) SMARTROAD (#8 — Kavish Chowdhoory)
+
+New Plymouth  R7: 1) LOCH KATRINE* (#3 — Bridget Grylls)
+New Plymouth  R7: 2) GHAZZAH (#14 — Liam Kauri)
+New Plymouth  R7: 3) ZANZIBAR (#5 — Rihaan Goyaram)
+
+New Plymouth  R8: 1) MISTER PUCCI* (#3 — Liam Kauri)
+New Plymouth  R8: 2) BILLY BOY (#1 — Sarah O'Malley)
+New Plymouth  R8: 3) COCKTAIL LAD* (#12 — Jim Chung)
+
+=========
+
+Rosehill  R1: 1) UNWRITTEN (#13 — Winona Costin)
+Rosehill  R1: 2) LASPIRIT DEELER* (#5 — Jay Ford)
+Rosehill  R1: 3) VETWELVE (#7 — Molly Bourke)
+
+Rosehill  R2: 1) FETES DES MERES (#13 — Siena Grima)
+Rosehill  R2: 2) BONNIE AND BRUCE (#17 — Benjamin Osmond)
+Rosehill  R2: 3) KING TAURUS (#18 — Jay Ford)
+
+Rosehill  R3: 1) WITHOUT PEER** (#2 — Chad Schofield)
+Rosehill  R3: 2) CROWN THE KING* (#5 — Ashley Morgan)
+Rosehill  R3: 3) NINJA* (#4 — Andrew Adkins)
+
+Rosehill  R4: 1) LUNA ANGEL (#13 — Winona Costin)
+Rosehill  R4: 2) SUPER NORWEST* (#10 — Ashley Morgan)
+Rosehill  R4: 3) SUNSHINE LAW* (#7 — Anna Roper)
+
+Rosehill  R5: 1) PELEUS (#6 — Ashley Morgan)
+Rosehill  R5: 2) GRAND PRAIRIE (#7 — Tom Sherry)
+Rosehill  R5: 3) SKYHOOK** (#1 — Kerrin McEvoy)
+
+Rosehill  R6: 1) CALIFORNIA GRASS (#18 — Reece Jones)
+Rosehill  R6: 2) HASTY HONEY (#4 — William A Stanley)
+Rosehill  R6: 3) SLY BOOTS (#13 — Adam Hyeronimus)
+
+Rosehill  R7: 1) ADELAIDE RIVER* (#2 — Dylan Gibbons)
+Rosehill  R7: 2) OUR GOLD HOPE** (#6 — Tommy Berry)
+Rosehill  R7: 3) HIGHLIGHTS (#5 — Ashley Morgan)
+
+Rosehill  R8: 1) UZZIAH* (#2 — Molly Bourke)
+Rosehill  R8: 2) O'ZIGGY (#9 — Winona Costin)
+Rosehill  R8: 3) STARMAN* (#16 — Jason Collett)
+
+Rosehill  R9: 1) RAVENCLAW* (#3 — Tommy Berry)
+Rosehill  R9: 2) MAL COUPE (#13 — Winona Costin)
+Rosehill  R9: 3) POKERJACK* (#6 — Braith Nock)
+
+Rosehill  R10: 1) GATSBY'S (#15 — Molly Bourke)
+Rosehill  R10: 2) ELETTRICA** (#4 — Jason Collett)
+Rosehill  R10: 3) LORD PENMAN* (#13 — Kerrin McEvoy)
+
+=========
+
+Caulfield  R1: 1) FLYER* (#5 — Zac Spain)
+Caulfield  R1: 2) CAVALLO RAMPANTE (#12 — Michael Dee)
+Caulfield  R1: 3) EPIC PROPORTIONS (#2 — Luke Cartwright)
+
+Caulfield  R2: 1) FAME (#5 — Arron Lynch)
+Caulfield  R2: 2) FALCON OF MALTA* (#4 — Nash Rawiller)
+Caulfield  R2: 3) FENGARADA (#3 — Rose Hammond)
+
+Caulfield  R3: 1) IMPENDING SHADOW* (#15 — Rose Hammond)
+Caulfield  R3: 2) EAGLE EXPRESS (#16 — Jye McNeil)
+Caulfield  R3: 3) KIRA (#17 — Daniel Moor)
+
+Caulfield  R4: 1) SPANISH BLAZE (#8 — Jye McNeil)
+Caulfield  R4: 2) CAPPER THIRTYNINE (#9 — Luke Cartwright)
+Caulfield  R4: 3) FIRE OF ETNA (#5 — Tom Prebble)
+
+Caulfield  R5: 1) SONOFKIRK (#6 — Jye McNeil)
+Caulfield  R5: 2) SHAGGY* (#4 — Ben Melham)
+Caulfield  R5: 3) EXPRESS CLASS* (#7 — Patrick Moloney)
+
+Caulfield  R6: 1) SEMELLE ROUGE (#11 — Beau Mertens)
+Caulfield  R6: 2) MY GLADIOLA (#3 — Jamie Mott)
+Caulfield  R6: 3) THE PLAYWRIGHT** (#1 — Blake Shinn)
+
+Caulfield  R7: 1) KIKO (#9 — Jye McNeil)
+Caulfield  R7: 2) POP AWARD (#10 — Matt Cartwright)
+Caulfield  R7: 3) ROYAL INSIGNIA* (#8 — Jordan Childs)
+
+Caulfield  R8: 1) ATTRITION** (#3 — Beau Mertens)
+Caulfield  R8: 2) YELLOW SAM (#11 — Jamie Mott)
+Caulfield  R8: 3) HERE TO SHOCK (#2 — Daniel Stackhouse)
+
+Caulfield  R9: 1) CADMUS (#8 — Jye McNeil)
+Caulfield  R9: 2) EL ROCKO* (#9 — Jett Stanley)
+Caulfield  R9: 3) REVELARE (#11 — Ryan Hurdle)
+
+=========
+
+Doomben  R1: 1) DRACENA (#4 — Anthony Allen)
+Doomben  R1: 2) SIZZLING GAL (#1 — Jace McMurray)
+Doomben  R1: 3) WALSH BAY* (#9 — Siobhan Rutledge)
+
+Doomben  R2: 1) ZOOLOGY* (#2 — Rob Thorburn)
+Doomben  R2: 2) TAPILDOODLEDO** (#4 — Ben Thompson)
+Doomben  R2: 3) EL PENSADOR* (#6 — Cejay Graham)
+
+Doomben  R3: 1) JEMOMA ALPILAGE (#11 — Taylor Marshall)
+Doomben  R3: 2) ARALETTA (#2 — Andrew Mallyon)
+Doomben  R3: 3) ZOUTASTIC** (#6 — Chad Lever)
+
+Doomben  R4: 1) OVERRIDING* (#1 — Jace McMurray)
+Doomben  R4: 2) CINQUE TERRE (#6 — Emily Lang)
+Doomben  R4: 3) YENDY (#10 — Cejay Graham)
+
+Doomben  R5: 1) AUSTRALASIA (#13 — Siobhan Rutledge)
+Doomben  R5: 2) DESTINYS SUMMIT* (#1 — Micheal Hellyer)
+Doomben  R5: 3) STYLISH JOKER (#7 — Luke Tarrant)
+
+Doomben  R6: 1) TRUE AMOR (#14 — Andrew Mallyon)
+Doomben  R6: 2) RHUVAAL (#11 — Jace McMurray)
+Doomben  R6: 3) ALDOLFITO (#1 — Ben Thompson)
+
+Doomben  R7: 1) LIGHT OF BOOM (#11 — Siobhan Rutledge)
+Doomben  R7: 2) SAFEWORK (#6 — Bailey Wheeler)
+Doomben  R7: 3) KAIZAD (#10 — Taylor Marshall)
+
+Doomben  R8: 1) ZOUPRINCE (#18 — Heavelon Van Der Hoven)
+Doomben  R8: 2) THE ASTRONOMER* (#7 — Tahlia Fenlon)
+Doomben  R8: 3) TERMAGANT* (#6 — Damien Thornton)
+
+Doomben  R9: 1) PRIME ASSET (#11 — Siobhan Rutledge)
+Doomben  R9: 2) LITTLE BEGINNINGS* (#8 — Andrew Mallyon)
+Doomben  R9: 3) TONNEOFGRIT (#6 — Kyle Wilson-Taylor)
+
+=========
+
+Morphettville  R1: 1) KHABY* (#5 — Matt Chadwick)
+Morphettville  R1: 2) ARTISTIC ANGEL (#11 — Teagan Voorham)
+Morphettville  R1: 3) TIDDY WIDDY* (#9 — Alana Livesey)
+
+Morphettville  R2: 1) IMA SHELBY* (#8 — Felicity Atkinson)
+Morphettville  R2: 2) SHOOTOOSE (#6 — Taylor Johnstone)
+Morphettville  R2: 3) VALIDATED* (#3 — Connor Murtagh)
+
+Morphettville  R3: 1) EMMOOKI MAGIC (#10 — Margaret Collett)
+Morphettville  R3: 2) ZANTHRON* (#3 — Felicity Atkinson)
+Morphettville  R3: 3) MINTULEE (#7 — Alana Livesey)
+
+Morphettville  R4: 1) BURNING BRIGHT* (#11 — Taylor Johnstone)
+Morphettville  R4: 2) DIXIE WHISTLER (#4 — Alana Livesey)
+Morphettville  R4: 3) LAVISH THINKER* (#6 — Jacob Opperman)
+
+Morphettville  R5: 1) MT NISEKO (#1 — Matt Chadwick)
+Morphettville  R5: 2) NEXTONIXS* (#7 — Rochelle Milnes)
+Morphettville  R5: 3) SETTEVELI* (#8 — Caitlin Jones)
+
+Morphettville  R6: 1) RABTAT* (#7 — Ben Price)
+Morphettville  R6: 2) PENSLEY (#15 — Teagan Voorham)
+Morphettville  R6: 3) RIKKI RIKKARDO (#12 — Matt Chadwick)
+
+Morphettville  R7: 1) JUST LIKE LISA (#11 — Margaret Collett)
+Morphettville  R7: 2) DELIGHTFUL SHECKY (#3 — Matt Chadwick)
+Morphettville  R7: 3) KOMACHI (#8 — Ben Price)
+
+Morphettville  R8: 1) LISELLE'S LUCK (#11 — Margaret Collett)
+Morphettville  R8: 2) DARKNCONFIDENTIAL* (#1 — Matt Chadwick)
+Morphettville  R8: 3) SACRED CHORD (#12 — Teagan Voorham)
+
+Morphettville  R9: 1) TRANTORO (#13 — Matt Chadwick)
+Morphettville  R9: 2) CUBAN WATERS (#12 — Teagan Voorham)
+Morphettville  R9: 3) IMMORTAL SHIELD* (#9 — Ben Price)
+
+=========
+
+Belmont  R1: 1) MY AUTHORITAH (#4 — William Pike)
+Belmont  R1: 2) SAAM TIME LUCKY (#5 — Steven Parnham)
+Belmont  R1: 3) STYLIN' (#9 — Natasha Faithfull)
+
+Belmont  R2: 1) BLAZING AWAY (#6 — Patrick Carbery)
+Belmont  R2: 2) KAPTAIN KAOS (#7 — Troy Turner)
+Belmont  R2: 3) INVESTMENTSTRATEGY** (#5 — Brad Parnham)
+
+Belmont  R3: 1) HANCHI* (#5 — Chris Parnham)
+Belmont  R3: 2) SNOW PRINCE (#6 — Jade McNaught)
+Belmont  R3: 3) GHOST WHO WALKS* (#1 — Chanel Cooper)
+
+Belmont  R4: 1) COONDLE* (#7 — Jason Whiting)
+Belmont  R4: 2) SOMETHING ROYAL (#9 — Patrick Carbery)
+Belmont  R4: 3) MILITARY POWER* (#1 — Chanel Cooper)
+
+Belmont  R5: 1) MANJERI (#15 — Patrick Carbery)
+Belmont  R5: 2) TRUEVINSKY (#4 — Natasha Faithfull)
+Belmont  R5: 3) HAPPY AS LARRY (#16 — Lisa Staples)
+
+Belmont  R6: 1) FIOREYES (#10 — Natasha Faithfull)
+Belmont  R6: 2) NOBLE CONNECTION* (#6 — Clint Johnston-Porter)
+Belmont  R6: 3) COSMIC CHAOS (#3 — Alex Hearn)
+
+Belmont  R7: 1) LITTLE SILVER (#4 — Natasha Faithfull)
+Belmont  R7: 2) BORDER FORCE (#7 — Jade McNaught)
+Belmont  R7: 3) SISU WARRIOR* (#1 — Chanel Cooper)
+
+Belmont  R8: 1) ABOVE THE PEG (#3 — Steven Parnham)
+Belmont  R8: 2) TON OF GRUNT* (#11 — Troy Turner)
+Belmont  R8: 3) BAYHARA (#9 — Laqdar Ramoly)
+
+=========
+
+Roma  R1: 1) FLANK SPEED** (#1 — Isabel Jessop)
+Roma  R1: 2) ABLETT** (#2 — Chelsea Francis)
+Roma  R1: 3) MON PIERRE* (#3 — Sarah Robbins)
+
+Roma  R2: 1) SIR OCCY* (#3 — Isabel Jessop)
+Roma  R2: 2) STORM DREAMER* (#5 — Paul Randall)
+Roma  R2: 3) MUIRON (#6 — Cheryl Rogers)
+
+Roma  R3: 1) AREYA TUCHUZY (#6 — Isabel Jessop)
+Roma  R3: 2) OAKFIELD TARGET* (#3 — Todd Banks)
+Roma  R3: 3) TERAMBI* (#2 — Kayla Barker)
+
+Roma  R4: 1) PERFECT WORK (#11 — Isabel Jessop)
+Roma  R4: 2) MISS IMPRESSIVE (#7 — Sarah Robbins)
+Roma  R4: 3) MISS RAPIDE (#8 — James Baker)
+
+Roma  R5: 1) SILVANNA'S SONG (#6 — Todd Banks)
+Roma  R5: 2) LIGHT UP THE DAWN (#7 — Isabel Jessop)
+Roma  R5: 3) LAYLAH'S WISH (#9 — Sarah Robbins)
+
+Roma  R6: 1) TIME TO TESTIFY (#8 — Isabel Jessop)
+Roma  R6: 2) VICTORY BEANS (#9 — Todd Banks)
+Roma  R6: 3) LEGISLATE (#5 — James Baker)
+
+=========
+
+Katherine  R1: 1) HALLOWED GROUND (#7 — Stan Tsaikos)
+Katherine  R1: 2) JUST FOR MARCUS (#2 — Jessica Booth)
+Katherine  R1: 3) BETTER SUN (#6 — Sonja Logan)
+
+Katherine  R2: 1) RUSTIC BOOM (#6 — Jessica Booth)
+Katherine  R2: 2) THROW AT DA STUMPS* (#2 — Paul Denton)
+Katherine  R2: 3) MUNSTER (#1 — Jarrod Todd)
+
+Katherine  R3: 1) CASSETTE (#2 — Jessica Booth)
+Katherine  R3: 2) MERCHANT DELIGHT* (#1 — Kristo Sardelic)
+Katherine  R3: 3) JUELENE (#3 — Sonja Logan)
+
+Katherine  R4: 1) THE STIFMEISTER (#7 — Jessica Booth)
+Katherine  R4: 2) BLOWN AWAY (#3 — Kristo Sardelic)
+Katherine  R4: 3) COLLISON** (#5 — Stan Tsaikos)
+
+Katherine  R5: 1) FUNNYIFITWON (#1 — Jessica Booth)
+Katherine  R5: 2) I'M A DREAMER (#5 — Jarrod Todd)
+Katherine  R5: 3) FIERCE LEGEND** (#2 — Stan Tsaikos)
+
+Katherine  R6: 1) SEGUSO (#5 — Stan Tsaikos)
+Katherine  R6: 2) HETTINGER (#3 — Kristo Sardelic)
+Katherine  R6: 3) TUBTHUMPER (#9 — Jessica Booth)
+
+=========
+
+Narrandera  R1: 1) LOVEOFMYLIFE (#7 — Cory Parish)
+Narrandera  R1: 2) ZOE OF ROME* (#9 — Josh Richards)
+Narrandera  R1: 3) FLYING BETTY* (#5 — Teaghan Martin)
+
+Narrandera  R2: 1) PLATINUM EXECUTIVE (#8 — Cory Parish)
+Narrandera  R2: 2) ONE LAST REWARD (#7 — Bradley Vale)
+Narrandera  R2: 3) EXCELLENT REWARD (#6 — Amy O'Driscoll)
+
+Narrandera  R3: 1) CRUSHEEN LASS* (#3 — Cory Parish)
+Narrandera  R3: 2) FIORENTE SPRITZ (#8 — Bradley Vale)
+Narrandera  R3: 3) EMPEROR OF FRANCE* (#9 — Amy O'Driscoll)
+
+Narrandera  R4: 1) ARTIST* (#4 — Richard Bensley)
+Narrandera  R4: 2) BALGOWAN (#10 — Cory Parish)
+Narrandera  R4: 3) IMPENDING LOVE (#9 — Brendan Ward)
+
+Narrandera  R5: 1) FORTIS IN ARMIS* (#3 — Cory Parish)
+Narrandera  R5: 2) ALPINE ROSE (#11 — Amy O'Driscoll)
+Narrandera  R5: 3) SHYLOCK (#2 — Richard Bensley)
+
+Narrandera  R6: 1) CRIMOSA (#9 — Cory Parish)
+Narrandera  R6: 2) OURZACRACKER (#12 — Amy O'Driscoll)
+Narrandera  R6: 3) IRISH CONSORT** (#1 — Alice Kennedy)
+
+=========
+
+Cairns  R1: 1) PARTY FOR US (#5 — Aidan Holt)
+Cairns  R1: 2) LICHFIELD ANGEL (#7 — Jason Taylor)
+Cairns  R1: 3) TOO MANY KISSES* (#3 — Justin Huxtable)
+
+Cairns  R2: 1) CONVERTOR (#5 — Aidan Holt)
+Cairns  R2: 2) ELSPHERE (#9 — Adam Sewell)
+Cairns  R2: 3) MERRY OLD SOUL (#8 — Krysten Swaffer)
+
+Cairns  R3: 1) THE HOME TEAM (#6 — Amanda Thomson)
+Cairns  R3: 2) SUPERSTITIONS (#4 — Nathan Thomas)
+Cairns  R3: 3) COOL STORY (#9 — Ty Wheeler)
+
+Cairns  R4: 1) THE COPS* (#8 — Ty Wheeler)
+Cairns  R4: 2) ZORAYDAH (#11 — Ashley Butler)
+Cairns  R4: 3) IT'S BEEN A TREK* (#4 — Adam Sewell)
+
+Cairns  R5: 1) IMPARDOO (#8 — Jason Taylor)
+Cairns  R5: 2) TARGETED (#10 — Jackson Murphy)
+Cairns  R5: 3) VIVENZO (#2 — Nathan Thomas)
+
+Cairns  R6: 1) LOWLANDS* (#7 — Sean Cormack)
+Cairns  R6: 2) AL RAS BLUES (#9 — Jackson Murphy)
+Cairns  R6: 3) BRAVE AGENDA (#3 — Adam Sewell)
+
+Cairns  R7: 1) FAMILY STAR (#5 — Jackson Murphy)
+Cairns  R7: 2) JEMELDI* (#3 — Ashley Butler)
+Cairns  R7: 3) LADY DAMUS** (#7 — Sean Cormack)
+
+Cairns  R8: 1) FIFTH POSITION (#5 — Jackson Murphy)
+Cairns  R8: 2) MAJOR ARTIE (#10 — Aidan Holt)
+Cairns  R8: 3) THE DRILLER (#9 — Adam Sewell)
+
+Cairns  R9: 1) THREEBROTHERS (#13 — Nathan Thomas)
+Cairns  R9: 2) CALM IS POWER (#7 — Aidan Holt)
+Cairns  R9: 3) FIVE BULLS* (#15 — Adam Sewell)
+
+=========
+
+Toowoomba  R1: 1) FLYING BANJO (#11 — Darren Evans)
+Toowoomba  R1: 2) GROOVE JET (#10 — Stacey Callow)
+Toowoomba  R1: 3) PUROSANGUE* (#3 — Jake Molloy)
+
+Toowoomba  R2: 1) DELORIS* (#15 — Wayne O'Connell)
+Toowoomba  R2: 2) SOUTH SEA* (#3 — Jake Molloy)
+Toowoomba  R2: 3) DATA LEAK (#2 — Stacey Callow)
+
+Toowoomba  R3: 1) SMART BINT (#8 — Karl Zechner)
+Toowoomba  R3: 2) BEARHUG* (#1 — Chelsea Baker)
+Toowoomba  R3: 3) FORTY TIMES* (#6 — Olivia Webb)
+
+Toowoomba  R4: 1) TUHINGA** (#4 — Olivia Webb)
+Toowoomba  R4: 2) CHARMED PASSAGE (#7 — Chelsea Baker)
+Toowoomba  R4: 3) COMMAND APPROVED (#8 — Hannah Richardson)
+
+Toowoomba  R5: 1) ITALIAN GIRL (#11 — Chelsea Baker)
+Toowoomba  R5: 2) SILVER AGENT (#6 — Jake Molloy)
+Toowoomba  R5: 3) NICCONIUM (#4 — Stacey Callow)
+
+Toowoomba  R6: 1) DEVIL'S RITE (#5 — Hannah Richardson)
+Toowoomba  R6: 2) ISLAND TIDE (#7 — Jade Metcalfe)
+Toowoomba  R6: 3) MISTREY EMPEROR** (#2 — Olivia Webb)
+
+Toowoomba  R7: 1) SHAMIC (#9 — Wayne O'Connell)
+Toowoomba  R7: 2) STELLA SIMONE (#7 — Amy Graham)
+Toowoomba  R7: 3) MAN TALK** (#2 — Olivia Webb)
+
+=========
+
+Kembla Grange  R1: 1) DEEP AFFECTION (#6 — Keagan Latham)
+Kembla Grange  R1: 2) MAGNOLIA JEWEL* (#3 — Mollie Fitzgerald)
+Kembla Grange  R1: 3) ALL SAINTS* (#2 — Rory Hutchings)
+
+Kembla Grange  R2: 1) SPIRITUALISTIC (#3 — Rory Hutchings)
+Kembla Grange  R2: 2) VIA VARALLO (#6 — Emma Ly)
+Kembla Grange  R2: 3) MIKKI VAIN* (#8 — Brock Ryan)
+
+Kembla Grange  R3: 1) COLD FIRE (#6 — Adrian Layt)
+Kembla Grange  R3: 2) MENSHEVIK* (#9 — Mollie Fitzgerald)
+Kembla Grange  R3: 3) DECALOGUE* (#7 — Brock Ryan)
+
+Kembla Grange  R4: 1) POUR BENN* (#1 — Rory Hutchings)
+Kembla Grange  R4: 2) SO PRECISE* (#11 — Mollie Fitzgerald)
+Kembla Grange  R4: 3) PRECINCT* (#5 — Louise Day)
+
+Kembla Grange  R5: 1) MAH ALI* (#4 — Adrian Layt)
+Kembla Grange  R5: 2) VICTORY AT OMAHA (#9 — Shaun Guymer)
+Kembla Grange  R5: 3) CASH ME* (#1 — Olivia Chambers)
+
+Kembla Grange  R6: 1) WINNING RULET (#7 — Adrian Layt)
+Kembla Grange  R6: 2) NIELSEN PARK* (#3 — Rory Hutchings)
+Kembla Grange  R6: 3) BILLY BOWLEGG (#10 — Deanne Panya)
+
+Kembla Grange  R7: 1) NOBLE SOLDIER (#1 — Holly Durnan)
+Kembla Grange  R7: 2) SCISSOR ME TIMBERS (#7 — Rory Hutchings)
+Kembla Grange  R7: 3) ALL TOO LUCKY* (#8 — Louise Day)
+
+Kembla Grange  R8: 1) KING TAT (#13 — Nyssa Burrells)
+Kembla Grange  R8: 2) CALGARY KING (#12 — Emma Ly)
+Kembla Grange  R8: 3) MR ROCK IT* (#1 — Holly Durnan)
+
+=========
+
+Beaudesert  R1: 1) EPIC FLASH* (#13 — Brooke Ainsworth)
+Beaudesert  R1: 2) PRETTY RHO (#9 — Amy Graham)
+Beaudesert  R1: 3) XUANFENG* (#14 — Nozi Tomizawa)
+
+Beaudesert  R2: 1) SALLY'S KATO (#7 — Brooke Ainsworth)
+Beaudesert  R2: 2) FLASH ONE HEY (#2 — Jasper Franklin)
+Beaudesert  R2: 3) NEXTA SANTA ANA* (#4 — Kirk Matheson)
+
+Beaudesert  R3: 1) LIGHTNING DRONE (#11 — Nozi Tomizawa)
+Beaudesert  R3: 2) MISHANI LETHAL (#7 — Tiffani Brooker)
+Beaudesert  R3: 3) I'LLTELLYOUTONIGHT (#13 — Georgina Cartwright)
+
+Beaudesert  R4: 1) SWIFT DUKE* (#2 — Danny Peisley)
+Beaudesert  R4: 2) ALL TOO FOXY (#9 — Chelsea Baker)
+Beaudesert  R4: 3) MISHANI ERUPTION (#4 — Rikki Jamieson)
+
+Beaudesert  R5: 1) NIENNA (#11 — Scott Sheargold)
+Beaudesert  R5: 2) SO SAIN (#20 — Noriyuki Masuda)
+Beaudesert  R5: 3) PRIDE OF ICE* (#15 — Jasper Franklin)
+
+Beaudesert  R6: 1) GIDDY GAN'S JOY* (#5 — Sariah Champkin)
+Beaudesert  R6: 2) DANCE BABE* (#15 — Ashvin Goindasamy)
+Beaudesert  R6: 3) JUSTICE SERVED* (#3 — Jai Williams)
+
+Beaudesert  R7: 1) ROTHSPHENE (#10 — Anthony Allen)
+Beaudesert  R7: 2) OAKFIELD EAGLE (#7 — Noriyuki Masuda)
+Beaudesert  R7: 3) BEAT HOLLOW* (#4 — Dan McGillivray)
+
+Beaudesert  R8: 1) LET FLY (#9 — Nozi Tomizawa)
+Beaudesert  R8: 2) FIRE KING (#8 — Scott Sheargold)
+Beaudesert  R8: 3) SECURITY ADVISOR (#12 — Dale Smith)
+
+Beaudesert  R9: 1) INDUBITABLY* (#7 — Ashvin Goindasamy)
+Beaudesert  R9: 2) MISSY NO NAY* (#10 — Sariah Champkin)
+Beaudesert  R9: 3) ACE'S IN BLOOM (#8 — Dan McGillivray)
+
+=========
+
+Gilgandra  R1: 1) MEGAPHONE MISS (#5 — Wendy Peel)
+Gilgandra  R1: 2) PILLAGER* (#6 — Jordan Quince)
+Gilgandra  R1: 3) CAPRICIOUS BELLE (#8 — Georgina McDonnell)
+
+Gilgandra  R2: 1) ALLERDINGS (#4 — Wendy Peel)
+Gilgandra  R2: 2) JUSTO'S ROCKET (#9 — Caine Stuart)
+Gilgandra  R2: 3) SILENT DRAMA* (#10 — Jordan Quince)
+
+Gilgandra  R3: 1) SPOTTED* (#5 — Wendy Peel)
+Gilgandra  R3: 2) PONTOON PRINCE (#7 — Georgina McDonnell)
+Gilgandra  R3: 3) SAVVY STATEMENT* (#11 — Caine Stuart)
+
+Gilgandra  R4: 1) BEAN ALL OVA (#12 — Georgina McDonnell)
+Gilgandra  R4: 2) PLATINUM WARRIOR (#7 — Caine Stuart)
+Gilgandra  R4: 3) THE DRAFTER* (#10 — Kath Bell-Pitomac)
+
+Gilgandra  R5: 1) MEAN GIRLS (#3 — Wendy Peel)
+Gilgandra  R5: 2) FORT JEFFERSON (#8 — Ken Dunbar)
+Gilgandra  R5: 3) WINNING STATEMENT* (#11 — Kath Bell-Pitomac)
+
+Gilgandra  R6: 1) MEAN GIRLS (#14 — Wendy Peel)
+Gilgandra  R6: 2) KELILAH (#12 — Georgina McDonnell)
+Gilgandra  R6: 3) FOXWELL* (#7 — Wendy Peel)
+
+Gilgandra  R7: 1) READY MADE DOLL (#9 — Georgina McDonnell)
+Gilgandra  R7: 2) DIFFERENT ROAD* (#2 — Caine Stuart)
+Gilgandra  R7: 3) NAPOLI (#8 — Jessica Brookes)
+
+=========
+
+Warracknabeal  R1: 1) PHANTOM MISS** (#6 — Craig Atkinson)
+Warracknabeal  R1: 2) SNOWBALL (#7 — Cian MacRedmond)
+Warracknabeal  R1: 3) HOLLOW TURF (#2 — Jack Hill)
+
+Warracknabeal  R2: 1) ATOMIC TOMMY (#14 — Amy Herrmann)
+Warracknabeal  R2: 2) PORT KEMBLA* (#11 — Milos Bunjevac)
+Warracknabeal  R2: 3) OVER THE EDGE (#12 — Melissa Julius)
+
+Warracknabeal  R3: 1) SYMPHONITE (#7 — Jordyn Weatherley)
+Warracknabeal  R3: 2) RICCIA* (#15 — Christine Puls)
+Warracknabeal  R3: 3) SLAYRIDER (#3 — Paul Gatt)
+
+Warracknabeal  R4: 1) DARE TO BE BOLD* (#14 — Craig Atkinson)
+Warracknabeal  R4: 2) GALLACH ABHAILE* (#6 — Milos Bunjevac)
+Warracknabeal  R4: 3) COASTAL WHISPERS (#5 — Will Price)
+
+Warracknabeal  R5: 1) JAZ TYCOON (#3 — Cian MacRedmond)
+Warracknabeal  R5: 2) VEGAS ON FIRE* (#9 — Sam Kennedy)
+Warracknabeal  R5: 3) TREASURY PLACE* (#6 — Jarrod Fry)
+
+Warracknabeal  R6: 1) TARSHIN (#14 — Cian MacRedmond)
+Warracknabeal  R6: 2) AKIHIRO (#10 — Will Price)
+Warracknabeal  R6: 3) PENDANTE (#18 — Jade Darose)
+
+Warracknabeal  R7: 1) PADSTOW POLLY* (#16 — Jade Darose)
+Warracknabeal  R7: 2) LOGO LOGIC (#13 — Craig Atkinson)
+Warracknabeal  R7: 3) GALAXY TURF (#15 — Nathan Punch)
+
+Warracknabeal  R8: 1) SKY ROYALE* (#8 — Christine Puls)
+Warracknabeal  R8: 2) SURFY PETE (#5 — Will Price)
+Warracknabeal  R8: 3) TIMBOLTON (#15 — Paul Gatt)
+
+Warracknabeal  R9: 1) MISS THATCHER* (#11 — Jade Darose)
+Warracknabeal  R9: 2) FLIP THE SWITCH* (#6 — Melea Castle)
+Warracknabeal  R9: 3) BENTLEY BROOK* (#1 — Brad Rawiller)
+
+=========
+
+Broome  R1: 1) ZORRO'S AIM (#4 — Kristy Bennett)
+Broome  R1: 2) WICKED ONE (#5 — Jerry Noske)
+Broome  R1: 3) TWISTED TRICKSTER (#6 — John Kissick)
+
+Broome  R2: 1) PRIVATE SAPLING* (#2 — Holly Nottle)
+Broome  R2: 2) TORQUED UP (#3 — Victoria Corver)
+Broome  R2: 3) PACIFIC LADY (#7 — Kate Pateman)
+
+Broome  R3: 1) CANGGU* (#4 — Rosie Mahony)
+Broome  R3: 2) ROMMEL'S JEUNEY (#8 — Bonnie Palise)
+Broome  R3: 3) ROSE OF DENMARK (#6 — Jerry Noske)
+
+Broome  R4: 1) GRANITE ROCK (#7 — Elisha Whittington)
+Broome  R4: 2) RED REBEL** (#1 — Natika Riordan)
+Broome  R4: 3) GUARD THE SAFE (#8 — Kristy Bennett)
+
+Broome  R5: 1) HEY BULL (#10 — Elisha Whittington)
+Broome  R5: 2) FAST JOHN (#3 — Kristy Bennett)
+Broome  R5: 3) MARINES CRY (#4 — Victoria Corver)
+
+Broome  R6: 1) MAKE YOUR POINT (#12 — Elisha Whittington)
+Broome  R6: 2) ROEY CLAM (#6 — Peter B Farrell)
+Broome  R6: 3) CAPRICORN MAN* (#2 — Natika Riordan)
+
+Broome  R7: 1) KING MAHUTA (#13 — Elisha Whittington)
+Broome  R7: 2) ZADAR ROCK* (#1 — Michael Heagney)
+Broome  R7: 3) STRIKING FELLA (#4 — Kristy Bennett)
+
+Broome  R8: 1) STREET MASCHINO (#6 — Elisha Whittington)
+Broome  R8: 2) HALLAROSTE (#12 — Michael Heagney)
+Broome  R8: 3) CHUCK A LUCK (#9 — Victoria Corver)
+

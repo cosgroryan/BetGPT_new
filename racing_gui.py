@@ -59,7 +59,7 @@ HEADERS = {
     "Accept": "application/json",
     "User-Agent": "RyanCosgrove/1.0",
 }
-# ^^^ add your real values above ^^^
+
 
 TIMEOUT = 20
 ODDS_BASE = "https://json.tab.co.nz/odds"
@@ -1193,14 +1193,20 @@ class RaceViewer(tk.Toplevel):
         self._param_change_job = self.after(200, self._apply_model_params)
     
     def _refresh_signals_table(self):
-        fmt = lambda p: ("" if p is None else f"{p*100:.1f}")
+        if not hasattr(self, "sig_tree"):
+            return
+
         self.sig_tree.delete(*self.sig_tree.get_children())
         for r in self.runners:
             m = r["metrics"]
+
+            # Prefer raw overlay for display if it exists, else scaled
+            ov_display = m.get("ew_overlay_pct_raw", m.get("ew_overlay_pct"))
+
             no_i = r.get("no")
-            nn_p   = self.model_winp_by_no_nn.get(int(no_i), None)   if no_i is not None else None
-            reg_p  = self.model_winp_by_no_reg.get(int(no_i), None)  if no_i is not None else None
-            rank_p = self.model_winp_by_no_rank.get(int(no_i), None) if no_i is not None else None
+            nn_p   = self.model_winp_by_no_nn.get(int(no_i)) if no_i is not None else None
+            reg_p  = self.model_winp_by_no_reg.get(int(no_i)) if no_i is not None else None
+            rank_p = self.model_winp_by_no_rank.get(int(no_i)) if no_i is not None else None
 
             self.sig_tree.insert(
                 "",
@@ -1211,12 +1217,12 @@ class RaceViewer(tk.Toplevel):
                     r.get("name") or "",
                     fmt_price(m.get("win_fx")),
                     fmt_price(m.get("win_tote")),
-                    fmt(nn_p),
-                    fmt(reg_p),
-                    fmt(rank_p),
+                    ("" if nn_p   is None else f"{nn_p*100:.1f}"),
+                    ("" if reg_p  is None else f"{reg_p*100:.1f}"),
+                    ("" if rank_p is None else f"{rank_p*100:.1f}"),
                     pct(m.get("imp_win")),
                     pct(m.get("firming_pct")),
-                    pct(m.get("ew_overlay_pct")),
+                    pct(ov_display),
                     pct(m.get("kelly_pct1x")),
                     m.get("pace") or "",
                     m.get("edge") or "",
@@ -1257,8 +1263,29 @@ class RaceViewer(tk.Toplevel):
 
     # ----- Recommend picks (kept from your working version)
     def recommend_picks(self):
+        alpha = float(self.blend_var.get())
+        tau   = float(self.tau_var.get())
+
+        # Recompute with current params
+        self._compute_all_model_probs(silent=True, tau=tau, alpha=alpha)
+
         max_odds = safe_float(self.max_odds_var.get(), None)
         must_be_value = self.require_kelly_pos.get()
+
+        # === 1) Normalise overlays for this race ===
+        overlays = [r["metrics"].get("ew_overlay_pct") for r in self.runners if r["metrics"].get("ew_overlay_pct") is not None]
+        if len(overlays) >= 2:
+            min_ov, max_ov = min(overlays), max(overlays)
+            if max_ov - min_ov > 1e-9:  # only scale when variation exists
+                rng = max_ov - min_ov
+                for r in self.runners:
+                    m = r["metrics"]
+                    o = m.get("ew_overlay_pct")
+                    if o is not None:
+                        # Save raw before scaling
+                        if "ew_overlay_pct_raw" not in m:
+                            m["ew_overlay_pct_raw"] = o
+                        m["ew_overlay_pct"] = (o - min_ov) / rng
 
         candidates = []
         for r in self.runners:
@@ -1271,37 +1298,50 @@ class RaceViewer(tk.Toplevel):
             if must_be_value and (m.get("kelly_pct1x") or 0) <= 0:
                 continue
 
+            # Market implied from WinTote first, else WinFx
+            market_p = 0.0
+            wt = m.get("win_tote")
+            if wt and wt > 1.0:
+                market_p = 1.0 / float(wt)
+            elif O and O > 1.0:
+                market_p = 1.0 / float(O)
+
+            # Mean RAW model prob across NN, GBM Reg, GBM Rank
+            no_i = safe_int(r.get("no"))
+            model_mean_raw = 0.0
+            if no_i:
+                model_mean_raw = float(np.mean([
+                    self.model_winp_by_no_nn_raw.get(no_i, 0.0),
+                    self.model_winp_by_no_reg_raw.get(no_i, 0.0),
+                    self.model_winp_by_no_rank_raw.get(no_i, 0.0),
+                ]))
+
+            blended_p = alpha * model_mean_raw + (1.0 - alpha) * market_p
+
+            # Heuristics
             overlay = m.get("ew_overlay_pct") or 0.0
             firm = m.get("firming_pct")
             firm_adj = 0.0 if firm is None else firm
             edge_bonus = 0.05 if m.get("edge") else 0.0
 
-            # small bonus for higher model probability if available
-            model_bonus = 0.0
-            no_i = safe_int(r.get("no"))
-            import numpy as np
-            if no_i:
-                mp = np.mean([
-                    self.model_winp_by_no_nn.get(no_i, 0.0),
-                    self.model_winp_by_no_reg.get(no_i, 0.0),
-                    self.model_winp_by_no_rank.get(no_i, 0.0),
-                ])
-                model_bonus = mp * 1.0
-
-
-            score = overlay * 2.0 + firm_adj * 0.2 + edge_bonus + model_bonus
+            # Updated weighting
+            score = overlay * 1.5 + firm_adj * 0.2 + edge_bonus + blended_p * 1.5
             candidates.append((score, r, m))
 
         candidates.sort(reverse=True, key=lambda x: x[0])
-        picks = [ (r, m) for _, r, m in candidates[:3] ]
+        picks = [(r, m) for _, r, m in candidates[:3]]
 
         self.picks_tree.delete(*self.picks_tree.get_children())
         for r, m in picks:
             self.picks_tree.insert(
                 "", "end",
-                values=(r.get("no"), r.get("name"),
-                        fmt_price(m.get("win_fx")), fmt_price(m.get("win_tote")), "", "", "", "", "")
+                values=(
+                    r.get("no"), r.get("name"),
+                    fmt_price(m.get("win_fx")), fmt_price(m.get("win_tote")),
+                    "", "", "", "", ""
+                )
             )
+
 
     # ----- Stakes
     def compute_stakes(self):
@@ -1358,8 +1398,8 @@ class RaceViewer(tk.Toplevel):
         plan_lines.append(
             "Assumptions: " +
             ("Kelly uses WinTote as fair probability when available; if missing, falls back to WinFx implied (edge≈0)."
-             if use_tote else
-             "Kelly uses WinFx implied probability only.")
+            if use_tote else
+            "Kelly uses WinFx implied probability only.")
         )
         plan_lines.append("")
 
@@ -1565,21 +1605,25 @@ class RaceViewer(tk.Toplevel):
     # ===== Model win% (robust) =====
     def _compute_all_model_probs(self, silent=True, tau=0.4, alpha=0.6):
         """
-        Compute win% for three models and store as dicts keyed by runner_number:
-        - self.model_winp_by_no_nn
-        - self.model_winp_by_no_reg
-        - self.model_winp_by_no_rank
+        Build two sets of dicts:
+        - *_raw : pure model probabilities (no market blending)
+        - *(no suffix): what to show in Signals (blended with market by alpha if available)
 
-        NN uses your MC PL sampler.
-        GBM-Rank uses LightGBM ranking scores -> PL.
-        GBM-Reg uses LightGBM regression scores (lower=better) -> flip sign -> PL.
+        Stored keys by runner_number:
+        self.model_winp_by_no_nn_raw,  _reg_raw,  _rank_raw
+        self.model_winp_by_no_nn,      _reg,      _rank
         """
-        self.model_winp_by_no_nn   = {}
-        self.model_winp_by_no_reg  = {}
+        # init
+        self.model_winp_by_no_nn_raw = {}
+        self.model_winp_by_no_reg_raw = {}
+        self.model_winp_by_no_rank_raw = {}
+
+        self.model_winp_by_no_nn = {}
+        self.model_winp_by_no_reg = {}
         self.model_winp_by_no_rank = {}
 
         try:
-            # Build race DF used by the model pipelines
+            # Build race DF
             date_str, meetno, raceno = self._results_url_parts()
             if not (date_str and meetno and raceno):
                 raise RuntimeError("missing date/meet/race coords")
@@ -1589,27 +1633,22 @@ class RaceViewer(tk.Toplevel):
             if df is None or df.empty:
                 raise RuntimeError("empty schedule df")
 
-            # ---------- NN ----------
-            nn_df = _nn_probs_for_df(df, tau=tau, n_samples=4000, alpha_model_weight=alpha)
-            nn_nums  = np.array([safe_int(x, None)   for x in nn_df.get("runner_number")], dtype=object)
-            nn_probs = np.array([safe_float(x, None) for x in nn_df.get("win_prob")],      dtype=float)
+            # ---------- NN (RAW: force full model weight) ----------
+            nn_df   = _nn_probs_for_df(df, tau=tau, n_samples=4000, alpha_model_weight=1.0)
+            nn_nums = np.array([safe_int(x, None)   for x in nn_df.get("runner_number")], dtype=object)
+            nn_raw  = np.array([safe_float(x, None) for x in nn_df.get("win_prob")],      dtype=float)
 
-            # ---------- GBM: Ranking ----------
-            rank_pred   = gbm.load_gbm_and_predict(df, model_name="model_lgbm.txt")
-            rank_scores = np.asarray(rank_pred["score"], dtype=float)          # higher = better
-            rank_win    = gbm._scores_to_pl_win_probs(rank_scores, tau=tau)    # PL top-1 from scores
-            if "implied_p" in df.columns and df["implied_p"].notna().any():
-                rank_win = gbm.blend_with_market(rank_win, df["implied_p"].to_numpy(), alpha=alpha)
+            # ---------- GBM Rank (RAW) ----------
+            rank_pred   = gbm.load_gbm_and_predict(df, model_name=GBM_RANK_MODEL_NAME)
+            rank_scores = np.asarray(rank_pred["score"], dtype=float)           # higher is better
+            rank_raw    = gbm._scores_to_pl_win_probs(rank_scores, tau=tau)     # no market blend here
 
-            # ---------- GBM: Regression ----------
-            reg_pred   = gbm.load_gbm_and_predict(df, model_name="model_lgbm_reg.txt")
-            # Regression "score": lower predicted finish is better, so flip sign
-            reg_scores = -np.asarray(reg_pred["score"], dtype=float)
-            reg_win    = gbm._scores_to_pl_win_probs(reg_scores, tau=tau)
-            if "implied_p" in df.columns and df["implied_p"].notna().any():
-                reg_win = gbm.blend_with_market(reg_win, df["implied_p"].to_numpy(), alpha=alpha)
+            # ---------- GBM Reg (RAW) ----------
+            reg_pred   = gbm.load_gbm_and_predict(df, model_name=GBM_REG_MODEL_NAME)
+            reg_scores = -np.asarray(reg_pred["score"], dtype=float)            # lower finish is better
+            reg_raw    = gbm._scores_to_pl_win_probs(reg_scores, tau=tau)       # no market blend here
 
-            # ---------- Sanitise + map to runner numbers ----------
+            # ---------- Sanitise + map ----------
             rn_series = df.get("runner_number")
             nums_iter = rn_series.values if rn_series is not None else []
             nums = np.array([safe_int(x, None) for x in nums_iter], dtype=object)
@@ -1619,16 +1658,37 @@ class RaceViewer(tk.Toplevel):
                 s = float(v.sum())
                 return (v / s) if s > 0 else v
 
-            nn_probs = _clean(nn_probs)
-            rank_win = _clean(rank_win)
-            reg_win  = _clean(reg_win)
+            nn_raw   = _clean(nn_raw)
+            rank_raw = _clean(rank_raw)
+            reg_raw  = _clean(reg_raw)
 
-            self.model_winp_by_no_nn   = {int(n): float(p) for n, p in zip(nn_nums, nn_probs) if n is not None}
-            self.model_winp_by_no_rank = {int(n): float(p) for n, p in zip(nums,    rank_win) if n is not None}
-            self.model_winp_by_no_reg  = {int(n): float(p) for n, p in zip(nums,    reg_win)  if n is not None}
+            self.model_winp_by_no_nn_raw   = {int(n): float(p) for n, p in zip(nn_nums, nn_raw)   if n is not None}
+            self.model_winp_by_no_rank_raw = {int(n): float(p) for n, p in zip(nums,    rank_raw) if n is not None}
+            self.model_winp_by_no_reg_raw  = {int(n): float(p) for n, p in zip(nums,    reg_raw)  if n is not None}
 
-            # Keep only currently visible runners to stay aligned with the UI
+            # Visible runners only
             visible = [int(r.get("no")) for r in self.runners if r.get("no") is not None]
+            self.model_winp_by_no_nn_raw   = {n: self.model_winp_by_no_nn_raw.get(n, 0.0)   for n in visible}
+            self.model_winp_by_no_reg_raw  = {n: self.model_winp_by_no_reg_raw.get(n, 0.0)  for n in visible}
+            self.model_winp_by_no_rank_raw = {n: self.model_winp_by_no_rank_raw.get(n, 0.0) for n in visible}
+
+            # ---------- Build display maps (Signals) with market blend if we have implied_p ----------
+            if "implied_p" in df.columns and df["implied_p"].notna().any():
+                market = _clean(df["implied_p"].to_numpy())
+
+                def _blend(raw, mkt):
+                    return _clean(alpha * raw + (1.0 - alpha) * mkt)
+
+                nn_disp   = _blend(nn_raw,   market)
+                reg_disp  = _blend(reg_raw,  market)
+                rank_disp = _blend(rank_raw, market)
+            else:
+                nn_disp, reg_disp, rank_disp = nn_raw, reg_raw, rank_raw
+
+            self.model_winp_by_no_nn   = {int(n): float(p) for n, p in zip(nn_nums, nn_disp)   if n is not None}
+            self.model_winp_by_no_rank = {int(n): float(p) for n, p in zip(nums,    rank_disp) if n is not None}
+            self.model_winp_by_no_reg  = {int(n): float(p) for n, p in zip(nums,    reg_disp)  if n is not None}
+
             self.model_winp_by_no_nn   = {n: self.model_winp_by_no_nn.get(n, 0.0)   for n in visible}
             self.model_winp_by_no_reg  = {n: self.model_winp_by_no_reg.get(n, 0.0)  for n in visible}
             self.model_winp_by_no_rank = {n: self.model_winp_by_no_rank.get(n, 0.0) for n in visible}
@@ -1639,13 +1699,15 @@ class RaceViewer(tk.Toplevel):
                     messagebox.showwarning("Models", f"Fell back to equal split: {e}")
                 except Exception:
                     pass
-            # Equal-split fallback so UI remains functional
             n = max(1, sum(1 for r in self.runners if r.get("no") is not None))
             eq = 1.0 / n
             eq_map = {int(r.get("no")): eq for r in self.runners if r.get("no") is not None}
-            self.model_winp_by_no_nn   = dict(eq_map)
-            self.model_winp_by_no_reg  = dict(eq_map)
-            self.model_winp_by_no_rank = dict(eq_map)
+            self.model_winp_by_no_nn_raw   = dict(eq_map)
+            self.model_winp_by_no_reg_raw  = dict(eq_map)
+            self.model_winp_by_no_rank_raw = dict(eq_map)
+            self.model_winp_by_no_nn       = dict(eq_map)
+            self.model_winp_by_no_reg      = dict(eq_map)
+            self.model_winp_by_no_rank     = dict(eq_map)
 
 
     # ===== Odds refresh =====
@@ -1705,6 +1767,8 @@ class RaceViewer(tk.Toplevel):
                 self.sig_tree.delete(*self.sig_tree.get_children())
                 for r in self.runners:
                     m = r["metrics"]
+                    if "ew_overlay_pct_raw" not in m and m.get("ew_overlay_pct") is not None:
+                        m["ew_overlay_pct_raw"] = m["ew_overlay_pct"]
                     no_i = r.get("no")
                     nn_p   = self.model_winp_by_no_nn.get(int(no_i)) if no_i is not None else None
                     reg_p  = self.model_winp_by_no_reg.get(int(no_i)) if no_i is not None else None
