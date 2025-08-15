@@ -44,10 +44,6 @@ from infer_from_schedule_json import (
 GBM_RANK_MODEL_NAME = "model_lgbm.txt"
 GBM_REG_MODEL_NAME  = "model_lgbm_reg.txt"
 
-# calibration / blending for GBM models TODO need to bring this as sliders to RaceViewer
-PL_TAU = 0.3
-BLEND_ALPHA = 0.6
-
 
 NZ = ZoneInfo("Pacific/Auckland")
 
@@ -865,6 +861,15 @@ class RaceViewer(tk.Toplevel):
         fav = data.get("favourite") or {}
         mover = data.get("mover") or {}
 
+        # Model params (start from your globals)
+        DEFAULT_TAU = 0.4
+        DEFAULT_BLEND = 0.6
+        self.tau_var   = tk.DoubleVar(value=DEFAULT_TAU)         # 0.10–1.00 typical
+        self.blend_var = tk.DoubleVar(value=DEFAULT_BLEND)    # 0.00–1.00
+
+        # Debounce handle
+        self._param_change_job = None
+
         race_cond = self.race.get("track_condition") or ""
 
         # runners + precompute metrics
@@ -873,7 +878,12 @@ class RaceViewer(tk.Toplevel):
             r["metrics"] = compute_runner_metrics(r, race_cond)
 
         # compute Model% once (NaN-proof; falls back to market or equal split)
-        self._compute_all_model_probs(silent=True)
+        self._compute_all_model_probs(
+            silent=True,
+            tau=float(self.tau_var.get()),
+            alpha=float(self.blend_var.get()),
+        )
+        
 
         # ----- Header
         hdr = ttk.Frame(self, padding=10)
@@ -951,6 +961,7 @@ class RaceViewer(tk.Toplevel):
         self.tree.pack(side="left", fill="both", expand=True)
         vsb.pack(side="right", fill="y")
 
+
         # tags for results
         self.tree.tag_configure("winner", background="#ffe680")
         self.tree.tag_configure("second", background="#e0e0e0")
@@ -978,6 +989,48 @@ class RaceViewer(tk.Toplevel):
                     m.get("edge") or "",
                 ),
             )
+        
+        controls = ttk.Frame(self, padding=(10, 0, 10, 0))
+        controls.pack(fill="x")
+
+        ttk.Label(controls, text="Tau (sharpness)").grid(row=0, column=0, sticky="w")
+        tau_scale = ttk.Scale(
+            controls,
+            from_=0.10, to=1.00, orient="horizontal",
+            variable=self.tau_var,
+            command=lambda _=None: self._on_model_params_changed()
+        )
+        tau_val = ttk.Label(controls, textvariable=tk.StringVar(
+            value=f"{self.tau_var.get():.2f}"
+        ))
+        def _fmt_tau(*_):
+            tau_val.configure(text=f"{self.tau_var.get():.2f}")
+        self.tau_var.trace_add("write", lambda *_: _fmt_tau())
+
+        tau_scale.grid(row=0, column=1, sticky="ew", padx=8)
+        tau_val.grid(row=0, column=2, sticky="w")
+
+        ttk.Label(controls, text="Blend (model↔market)").grid(row=0, column=3, sticky="w", padx=(20,0))
+        blend_scale = ttk.Scale(
+            controls,
+            from_=0.00, to=1.00, orient="horizontal",
+            variable=self.blend_var,
+            command=lambda _=None: self._on_model_params_changed()
+        )
+        blend_val = ttk.Label(controls, textvariable=tk.StringVar(
+            value=f"{self.blend_var.get():.2f}"
+        ))
+        def _fmt_blend(*_):
+            blend_val.configure(text=f"{self.blend_var.get():.2f}")
+        self.blend_var.trace_add("write", lambda *_: _fmt_blend())
+
+        blend_scale.grid(row=0, column=4, sticky="ew", padx=8)
+        blend_val.grid(row=0, column=5, sticky="w")
+
+        # grid stretch
+        controls.columnconfigure(1, weight=1)
+        controls.columnconfigure(4, weight=1)
+
 
         # ----- Notebook: Signals / Staking / Notes
         nb = ttk.Notebook(self)
@@ -1019,9 +1072,13 @@ class RaceViewer(tk.Toplevel):
         sig_hsb = ttk.Scrollbar(self.sig_table_frame, orient="horizontal", command=self.sig_tree.xview)
         self.sig_tree.configure(yscroll=sig_vsb.set, xscroll=sig_hsb.set)
 
+
+
         self.sig_tree.grid(row=0, column=0, sticky="nsew")
         sig_vsb.grid(row=0, column=1, sticky="ns")
         sig_hsb.grid(row=1, column=0, sticky="ew")
+
+        self._refresh_signals_table()
 
         self.sig_table_frame.rowconfigure(0, weight=1)
         self.sig_table_frame.columnconfigure(0, weight=1)
@@ -1042,38 +1099,7 @@ class RaceViewer(tk.Toplevel):
             self.sig_tree.column(cid, width=w, anchor=anchor)
 
 
-        # Fill Signals grid (metrics + Model%)
-        self.sig_tree.delete(*self.sig_tree.get_children())
-        for r in self.runners:
-            m = r["metrics"]
-            no_i = r.get("no")
-            nn_p   = self.model_winp_by_no_nn.get(int(no_i)) if no_i is not None else None
-            reg_p  = self.model_winp_by_no_reg.get(int(no_i)) if no_i is not None else None
-            rank_p = self.model_winp_by_no_rank.get(int(no_i)) if no_i is not None else None
-
-
-            self.sig_tree.insert(
-                "",
-                "end",
-                iid=f"r{no_i}",
-                values=(
-                    no_i or "",
-                    r.get("name") or "",
-                    fmt_price(m.get("win_fx")),
-                    fmt_price(m.get("win_tote")),
-                    ("" if nn_p   is None else f"{nn_p*100:.1f}"),
-                    ("" if reg_p  is None else f"{reg_p*100:.1f}"),
-                    ("" if rank_p is None else f"{rank_p*100:.1f}"),
-                    pct(m.get("imp_win")),
-                    pct(m.get("firming_pct")),
-                    pct(m.get("ew_overlay_pct")),
-                    pct(m.get("kelly_pct1x")),
-                    m.get("pace") or "",
-                    m.get("edge") or "",
-                ),
-            )
-
-
+        
         # Staking tab
         stk_frame = ttk.Frame(nb, padding=10)
         nb.add(stk_frame, text="Staking")
@@ -1159,6 +1185,53 @@ class RaceViewer(tk.Toplevel):
         hsb.grid(row=1, column=0, sticky="ew")
         parent.rowconfigure(0, weight=1)
         parent.columnconfigure(0, weight=1)
+
+    def _on_model_params_changed(self):
+        # debounce rapid slider moves (recompute after 200ms idle)
+        if self._param_change_job is not None:
+            self.after_cancel(self._param_change_job)
+        self._param_change_job = self.after(200, self._apply_model_params)
+    
+    def _refresh_signals_table(self):
+        fmt = lambda p: ("" if p is None else f"{p*100:.1f}")
+        self.sig_tree.delete(*self.sig_tree.get_children())
+        for r in self.runners:
+            m = r["metrics"]
+            no_i = r.get("no")
+            nn_p   = self.model_winp_by_no_nn.get(int(no_i), None)   if no_i is not None else None
+            reg_p  = self.model_winp_by_no_reg.get(int(no_i), None)  if no_i is not None else None
+            rank_p = self.model_winp_by_no_rank.get(int(no_i), None) if no_i is not None else None
+
+            self.sig_tree.insert(
+                "",
+                "end",
+                iid=f"r{no_i}",
+                values=(
+                    no_i or "",
+                    r.get("name") or "",
+                    fmt_price(m.get("win_fx")),
+                    fmt_price(m.get("win_tote")),
+                    fmt(nn_p),
+                    fmt(reg_p),
+                    fmt(rank_p),
+                    pct(m.get("imp_win")),
+                    pct(m.get("firming_pct")),
+                    pct(m.get("ew_overlay_pct")),
+                    pct(m.get("kelly_pct1x")),
+                    m.get("pace") or "",
+                    m.get("edge") or "",
+                ),
+            )
+
+
+    def _apply_model_params(self):
+        self._param_change_job = None
+        tau = float(self.tau_var.get())
+        alpha = float(self.blend_var.get())
+        # Recompute models with current params
+        self._compute_all_model_probs(silent=True, tau=tau, alpha=alpha)
+        # Refresh Signals table rows (reuse your existing refresh code)
+        self._refresh_signals_table()
 
     # ----- Picks loading
     def load_selected_picks(self):
@@ -1273,7 +1346,12 @@ class RaceViewer(tk.Toplevel):
             return
 
         # Keep Model% current for context in plan or future extensions
-        self._compute_all_model_probs(silent=True)
+        self._compute_all_model_probs(
+            silent=True,
+            tau=float(self.tau_var.get()),
+            alpha=float(self.blend_var.get()),
+        )
+
 
         plan_lines = []
         plan_lines.append(f"Bankroll: ${bankroll:.2f}  |  Kelly mult: {k_mult:.2f}  |  Dutch target profit: ${target_profit:.2f}")
@@ -1483,21 +1561,6 @@ class RaceViewer(tk.Toplevel):
             if rank == 1:
                 self.tree.see(iid)
 
-    def check_results(self):
-        try:
-            res = self._fetch_results_json()
-            places = self._extract_placings_map(res)
-            if not places:
-                messagebox.showinfo("Results", "No placings found yet for this race.")
-                return
-            self._apply_result_tags(places)
-            messagebox.showinfo(
-                "Results",
-                "Placings loaded.\n"
-                f"1st: #{places.get(1, '?')}   2nd: #{places.get(2, '?')}   3rd: #{places.get(3, '?')}"
-            )
-        except Exception as e:
-            messagebox.showerror("Results error", f"Could not fetch or apply results:\n{e}")
 
     # ===== Model win% (robust) =====
     def _compute_all_model_probs(self, silent=True, tau=0.4, alpha=0.6):
@@ -1606,7 +1669,12 @@ class RaceViewer(tk.Toplevel):
                 r["metrics"] = compute_runner_metrics(r, race_cond)
 
             # keep model current after odds update if you like
-            self._compute_all_model_probs(silent=True)
+            self._compute_all_model_probs(
+                silent=True,
+                tau=float(self.tau_var.get()),
+                alpha=float(self.blend_var.get()),
+            )
+
 
             # top table
             self.tree.delete(*self.tree.get_children())
@@ -1722,156 +1790,6 @@ class RaceViewer(tk.Toplevel):
             messagebox.showinfo("Saved", f"Saved to:\n{path}")
         except Exception as e:
             messagebox.showerror("Error", f"Failed to save file:\n{e}")
-
-    def refresh_odds(self):
-        """Fetch latest TAB odds for this race, merge, and refresh tables + plan text."""
-        try:
-            date_str = (self.parent.date_var.get() or "").strip()
-            meetno = self.parent.current_meetno()
-            raceno = safe_int(self.race.get("race_number"))
-            if not (date_str and meetno and raceno):
-                messagebox.showwarning("Can't refresh", "Need date, meeting, and race numbers.")
-                return
-
-            # Pull odds, merge into the current event payload
-            markets = fetch_tab_odds(self.parent.session, date_str, meetno, raceno)
-            prices_by_num = extract_prices_from_markets(markets)
-            merge_odds_into_event(self.payload, prices_by_num)
-
-            # Rebuild runners and metrics
-            self.runners = extract_runners(self.payload)
-            race_cond = self.race.get("track_condition") or ""
-            for r in self.runners:
-                r["metrics"] = compute_runner_metrics(r, race_cond)
-
-            # Recompute model probabilities (non-fatal)
-            self._compute_all_model_probs(silent=True)
-
-            # Refill TOP runners table
-            self.tree.delete(*self.tree.get_children())
-            for r in self.runners:
-                m = r.get("metrics", {})
-                self.tree.insert(
-                    "",
-                    "end",
-                    iid=f"r{r.get('no')}",
-                    values=(
-                        r.get("no") or "",
-                        r.get("name") or "",
-                        r.get("barrier") or "",
-                        r.get("jockey") or "",
-                        r.get("weight") or "",
-                        fmt_price(r.get("win_fixed")),
-                        fmt_price(r.get("place_fixed")),
-                        fmt_price(r.get("win_tote")),
-                        fmt_price(r.get("place_tote")),
-                        r.get("flucs_disp") or "",
-                        (r.get("form") or "")[:24],
-                        m.get("edge") or "",
-                    ),
-                )
-
-            # Refill SIGNALS table
-            if hasattr(self, "sig_tree"):
-                self.sig_tree.delete(*self.sig_tree.get_children())
-                for r in self.runners:
-                    m = r["metrics"]
-                    no_i = r.get("no")
-                    nn_p   = self.model_winp_by_no_nn.get(int(no_i)) if no_i is not None else None
-                    reg_p  = self.model_winp_by_no_reg.get(int(no_i)) if no_i is not None else None
-                    rank_p = self.model_winp_by_no_rank.get(int(no_i)) if no_i is not None else None
-
-                    self.sig_tree.insert(
-                        "",
-                        "end",
-                        iid=f"r{no_i}",
-                        values=(
-                            no_i or "",
-                            r.get("name") or "",
-                            fmt_price(m.get("win_fx")),
-                            fmt_price(m.get("win_tote")),
-                            ("" if nn_p   is None else f"{nn_p*100:.1f}"),
-                            ("" if reg_p  is None else f"{reg_p*100:.1f}"),
-                            ("" if rank_p is None else f"{rank_p*100:.1f}"),
-                            pct(m.get("imp_win")),
-                            pct(m.get("firming_pct")),
-                            pct(m.get("ew_overlay_pct")),
-                            pct(m.get("kelly_pct1x")),
-                            m.get("pace") or "",
-                            m.get("edge") or "",
-                        ),
-                    )
-
-
-            # Update any already-loaded picks with the new WinFx/WinTote
-            if hasattr(self, "picks_tree"):
-                by_no = {str(r.get("no")): r.get("metrics", {}) for r in self.runners}
-                for iid in self.picks_tree.get_children():
-                    no_ = self.picks_tree.set(iid, "no")
-                    m = by_no.get(no_ or "")
-                    if m:
-                        self.picks_tree.set(iid, "winfx", fmt_price(m.get("win_fx")))
-                        self.picks_tree.set(iid, "wintote", fmt_price(m.get("win_tote")))
-
-            # Quick text block so you have instructions/output on odds refresh
-            try:
-                lines = ["Odds refreshed. Quick model vs market view:"]
-                ranked = sorted(
-                    self.runners,
-                    key=lambda rr: (-(self.model_winp_by_no.get(int(rr.get("no") or -1)) or 0.0),
-                                    (rr["metrics"].get("win_fx") or 9e9))
-                )
-                for r in ranked[:6]:
-                    m = r.get("metrics", {})
-                    O = m.get("win_fx"); T = m.get("win_tote")
-                    mp = self.model_winp_by_no.get(int(r.get("no") or -1))
-                    be = (1.0 / O) if (O and O > 0) else None
-                    lines.append(
-                        f"  #{r.get('no')} {r.get('name')}  "
-                        f"WinFx {fmt_price(O)}  WinTote {fmt_price(T)}  "
-                        f"Model% {(f'{mp*100:.1f}' if mp is not None else '—')}  "
-                        f"Imp% {pct(m.get('imp_win'))}  Kelly% {pct(m.get('kelly_pct1x'))}  "
-                        f"{'(BE ' + f'{be:.3f}'+')' if be else ''}"
-                    )
-                if hasattr(self, "plan_text") and self.plan_text:
-                    self.plan_text.delete("1.0","end")
-                    self.plan_text.insert("1.0", "\n".join(lines))
-            except Exception:
-                pass
-
-            messagebox.showinfo("Odds", "Odds refreshed.")
-        except Exception as e:
-            messagebox.showerror("Odds", f"Failed to refresh odds:\n{e}")
-
-    # Copy/save plan
-    def copy_plan(self):
-        try:
-            txt = self.plan_text.get("1.0", "end-1c")
-            self.clipboard_clear()
-            self.clipboard_append(txt)
-            self.update_idletasks()
-            messagebox.showinfo("Copied", "Plan copied to clipboard")
-        except Exception as e:
-            messagebox.showerror("Error", f"Failed to copy:\n{e}")
-
-    def save_plan(self):
-        path = filedialog.asksaveasfilename(
-            defaultextension=".txt",
-            filetypes=[("Text files", "*.txt"), ("All files", "*.*")],
-            title="Save staking plan"
-        )
-        if not path:
-            return
-        try:
-            with open(path, "w", encoding="utf-8") as f:
-                f.write(self.plan_text.get("1.0", "end-1c"))
-            messagebox.showinfo("Saved", f"Saved to:\n{path}")
-        except Exception as e:
-            messagebox.showerror("Error", f"Failed to save file:\n{e}")
-
-    # ----- Raw JSON / Save -----
-    def show_raw(self):
-        JsonViewer(self, self.payload, title="Raw Event JSON")
 
     def save_json(self):
         path = filedialog.asksaveasfilename(
