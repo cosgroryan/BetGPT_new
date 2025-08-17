@@ -1,0 +1,119 @@
+===========================
+2025-08-18 | Meet 29 Race 1
+===========================
+Top pick: #5 BLARNEY STONE  |  Model win 34.6%  |  Fair $2.89
+
+Model order:
+ runner_number     runner_name fav_rank win_% $fair_win  new_horse
+             5   BLARNEY STONE     None  34.6      2.89      False
+             8 WILLIAM'S SMILE     None  31.4      3.19      False
+             1  WHISKEY GEORGE     None  17.6      5.69      False
+             4         ZOUFAME     None  15.2      6.57       True
+             6       TWIN GIFT     None   1.0    101.41       True
+             2          KUWAIT     None   0.2    516.03      False
+
+===========================
+2025-08-18 | Meet 29 Race 2
+===========================
+Top pick: #2 C'MON WICKSY  |  Model win 42.6%  |  Fair $2.35  |  NEW HORSE
+
+Model order:
+ runner_number    runner_name fav_rank win_% $fair_win  new_horse
+             2   C'MON WICKSY     None  42.6      2.35       True
+             4     BRANDYWINE     None  31.8      3.15      False
+             8 ROCK ALL NIGHT     None  17.4      5.74      False
+             9        VESTIGE     None   5.6     17.72      False
+             3   CARAVANSERAI     None   1.1     89.71      False
+            10  WINNING REIGN     None   0.7    133.75      False
+             1     BON TO RUN     None   0.7    135.13      False
+             6     MOSCA LUNA     None   0.0   6175.66      False
+
+===========================
+2025-08-18 | Meet 29 Race 3
+===========================
+Top pick: #10 LET RIP  |  Model win 35.3%  |  Fair $2.83
+
+Model order:
+ runner_number  runner_name fav_rank win_% $fair_win  new_horse
+            10      LET RIP     None  35.3      2.83      False
+             7    OUR EMILY     None  21.4      4.67      False
+             2  BRUTAL EYES     None  18.8      5.32      False
+             3    GOOD ONCE     None  10.8      9.25      False
+             8       KOBOLD     None   6.6     15.21       True
+             6 BULLA VINAKA     None   3.6     28.16      False
+             9 PROCYON MISS     None   2.4     41.01      False
+             5         KIRK     None   0.6    175.14      False
+             4 WRONG FOOTED     None   0.5    189.70      False
+
+===========================
+2025-08-18 | Meet 29 Race 4
+===========================
+Top pick: #9 GREEN PINEAPPLE  |  Model win 54.9%  |  Fair $1.82
+
+Model order:
+ runner_number     runner_name fav_rank win_% $fair_win  new_horse
+             9 GREEN PINEAPPLE     None  54.9      1.82      False
+             4 LADY REVOLUTION     None  26.9      3.71      False
+             5     STEELY GIRL     None  12.0      8.32      False
+            10        GEOSTORM     None   4.1     24.17      False
+             1        VIS I DO     None   1.0    101.30      False
+             2      SLUSH FUND     None   0.4    242.65      False
+             8      JUST SHANE     None   0.4    279.87      False
+             7        ISHIKARI     None   0.2    459.38      False
+             6          HINUNE     None   0.1    959.49      False
+
+===========================
+2025-08-18 | Meet 29 Race 5
+===========================
+Top pick: #5 HIGHWIRE FLYER  |  Model win 34.3%  |  Fair $2.92
+
+Model order:
+ runner_number       runner_name fav_rank win_% $fair_win  new_horse
+             5    HIGHWIRE FLYER     None  34.3      2.92      False
+             2        MAGIC IRIS     None  24.5      4.08       True
+             9        OLIVE JEAN     None  20.6      4.87       True
+             7           MISHPAT     None  14.3      7.01       True
+             8        SHEZASIREN     None   2.8     35.21      False
+            12    THAIBEEFSALADE     None   2.0     49.78      False
+            13         NICCOLINA     None   0.8    126.02      False
+             6 RUN THE RED LIGHT     None   0.4    229.33       True
+            11       FRENCH HARP     None   0.2    476.28      False
+            10  MY MALIBU BARBIE     None   0.1    859.14       True
+
+===========================
+2025-08-18 | Meet 29 Race 6
+===========================
+Top pick: #10 LUCKY BAY  |  Model win 76.3%  |  Fair $1.31
+
+Model order:
+ runner_number      runner_name fav_rank win_% $fair_win  new_horse
+            10        LUCKY BAY     None  76.3      1.31      False
+            11          TILLMAN     None  15.4      6.50      False
+             2  SWEET AS A KISS     None   4.6     21.61      False
+             1    FINAL COMMENT     None   1.4     73.05      False
+             4 BUFF IN DISGUISE     None   1.3     75.84      False
+             6              YAK     None   0.3    383.07      False
+            12    DANISH HUSSAR     None   0.2    538.75      False
+             7            THREW     None   0.1    699.13      False
+             9  DEVILS DAUGHTER     None   0.1    716.96      False
+             5        STOCKHOLM     None   0.1    886.17      False
+             3   DRUNKEN SAILOR     None   0.1    958.83      False
+             8       SOUL TAKER     None   0.1   1508.99      False
+
+===========================
+2025-08-18 | Meet 29 Race 7
+===========================
+Top pick: #10 MEDIA COVERAGE  |  Model win 62.7%  |  Fair $1.59
+
+Model order:
+ runner_number        runner_name fav_rank win_% $fair_win  new_horse
+            10     MEDIA COVERAGE     None  62.7      1.59      False
+             3         POWER BANK     None  25.7      3.90      False
+             4            KEADOOL     None   7.8     12.78      False
+             9         BUSHWALKER     None   1.9     52.15      False
+             6  CHAMPAGNE IN LACE     None   0.9    112.78      False
+             5     MISS CAPRICORN     None   0.4    241.33      False
+            11            SPRADAX     None   0.2    486.86      False
+             7 MAN FROM BRUSSELLS     None   0.2    503.22      False
+             8         QUICK ONYX     None   0.1   1240.03      False
+            12         MARVEL MAN     None   0.1   1389.94      False

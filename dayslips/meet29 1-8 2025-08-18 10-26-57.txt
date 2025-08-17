@@ -1,0 +1,121 @@
+===========================
+2025-08-18 | Meet 29 Race 1
+===========================
+Top pick: #5 BLARNEY STONE  |  Model win 40.0%  |  Fair $2.50  |  NEW HORSE
+
+Model order:
+ runner_number     runner_name fav_rank win_% $fair_win  new_horse
+             5   BLARNEY STONE     None  40.0      2.50       True
+             8 WILLIAM'S SMILE     None  17.2      5.80       True
+             2          KUWAIT     None  15.8      6.35       True
+             4         ZOUFAME     None  11.4      8.77       True
+             1  WHISKEY GEORGE     None  11.3      8.83       True
+             6       TWIN GIFT     None   4.3     23.44       True
+
+===========================
+2025-08-18 | Meet 29 Race 2
+===========================
+Top pick: #2 C'MON WICKSY  |  Model win 68.1%  |  Fair $1.47  |  NEW HORSE
+
+Model order:
+ runner_number    runner_name fav_rank win_% $fair_win  new_horse
+             2   C'MON WICKSY     None  68.1      1.47       True
+             3   CARAVANSERAI     None  19.8      5.05       True
+             1     BON TO RUN     None   4.0     25.24       True
+             4     BRANDYWINE     None   3.2     30.84       True
+            10  WINNING REIGN     None   2.0     50.67       True
+             8 ROCK ALL NIGHT     None   1.5     68.27       True
+             9        VESTIGE     None   0.8    122.73       True
+             6     MOSCA LUNA     None   0.7    151.39       True
+
+===========================
+2025-08-18 | Meet 29 Race 3
+===========================
+Top pick: #2 BRUTAL EYES  |  Model win 37.8%  |  Fair $2.65  |  NEW HORSE
+
+Model order:
+ runner_number  runner_name fav_rank win_% $fair_win  new_horse
+             2  BRUTAL EYES     None  37.8      2.65       True
+            10      LET RIP     None  21.9      4.56       True
+             6 BULLA VINAKA     None  12.8      7.82       True
+             7    OUR EMILY     None  10.5      9.51       True
+             9 PROCYON MISS     None   6.5     15.28       True
+             8       KOBOLD     None   5.9     16.86       True
+             4 WRONG FOOTED     None   3.6     27.84       True
+             5         KIRK     None   0.7    134.57       True
+             3    GOOD ONCE     None   0.2    553.70       True
+
+===========================
+2025-08-18 | Meet 29 Race 4
+===========================
+Top pick: #2 SLUSH FUND  |  Model win 63.9%  |  Fair $1.56  |  NEW HORSE
+
+Model order:
+ runner_number     runner_name fav_rank win_% $fair_win  new_horse
+             2      SLUSH FUND     None  63.9      1.56       True
+             4 LADY REVOLUTION     None  21.2      4.72       True
+             1        VIS I DO     None   7.0     14.31       True
+            10        GEOSTORM     None   2.7     36.71       True
+             8      JUST SHANE     None   1.5     66.33       True
+             9 GREEN PINEAPPLE     None   1.1     88.90       True
+             7        ISHIKARI     None   1.0     98.56       True
+             6          HINUNE     None   1.0    104.66       True
+             5     STEELY GIRL     None   0.6    170.66       True
+
+===========================
+2025-08-18 | Meet 29 Race 5
+===========================
+Top pick: #9 OLIVE JEAN  |  Model win 44.4%  |  Fair $2.25  |  NEW HORSE
+
+Model order:
+ runner_number       runner_name fav_rank win_% $fair_win  new_horse
+             9        OLIVE JEAN     None  44.4      2.25       True
+             5    HIGHWIRE FLYER     None  20.9      4.79       True
+             7           MISHPAT     None  20.7      4.82       True
+            13         NICCOLINA     None   5.4     18.47       True
+             2        MAGIC IRIS     None   3.1     32.31       True
+            11       FRENCH HARP     None   2.3     44.16       True
+            12    THAIBEEFSALADE     None   1.4     71.42       True
+             6 RUN THE RED LIGHT     None   0.8    121.79       True
+             8        SHEZASIREN     None   0.6    165.99       True
+            10  MY MALIBU BARBIE     None   0.4    253.62       True
+
+===========================
+2025-08-18 | Meet 29 Race 6
+===========================
+Top pick: #2 SWEET AS A KISS  |  Model win 33.7%  |  Fair $2.97  |  NEW HORSE
+
+Model order:
+ runner_number      runner_name fav_rank win_% $fair_win  new_horse
+             2  SWEET AS A KISS     None  33.7      2.97       True
+            10        LUCKY BAY     None  25.0      4.00       True
+             1    FINAL COMMENT     None  16.2      6.19       True
+             6              YAK     None   8.3     11.98       True
+            11          TILLMAN     None   6.4     15.52       True
+             4 BUFF IN DISGUISE     None   2.8     35.80       True
+             5        STOCKHOLM     None   2.6     38.53       True
+             7            THREW     None   2.4     41.45       True
+             3   DRUNKEN SAILOR     None   1.3     79.38       True
+            12    DANISH HUSSAR     None   0.7    151.95       True
+             8       SOUL TAKER     None   0.6    174.07       True
+             9  DEVILS DAUGHTER     None   0.1   1460.44       True
+
+===========================
+2025-08-18 | Meet 29 Race 7
+===========================
+Top pick: #4 KEADOOL  |  Model win 46.8%  |  Fair $2.14  |  NEW HORSE
+
+Model order:
+ runner_number        runner_name fav_rank win_% $fair_win  new_horse
+             4            KEADOOL     None  46.8      2.14       True
+             6  CHAMPAGNE IN LACE     None  22.3      4.49       True
+             5     MISS CAPRICORN     None  12.2      8.23       True
+             3         POWER BANK     None   3.7     26.73       True
+            10     MEDIA COVERAGE     None   3.7     26.78       True
+            12         MARVEL MAN     None   2.8     35.11       True
+            11            SPRADAX     None   2.8     35.94       True
+             7 MAN FROM BRUSSELLS     None   2.6     37.98       True
+             9         BUSHWALKER     None   1.7     58.37       True
+             8         QUICK ONYX     None   1.3     76.83       True
+
+[meet 29 race 8] No runners found.

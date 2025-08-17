@@ -41,6 +41,7 @@ from torch.utils.data import Dataset
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import mean_absolute_error, mean_squared_error
 from scipy.stats import spearmanr
+import unicodedata
 
 # -----------------------------
 # Repro
@@ -145,6 +146,13 @@ def _ensure_series_1d(obj, index):
         obj = pd.Series(obj, index=index)
     return obj
 
+def _strip_accents(s: str) -> str:
+    return "".join(c for c in unicodedata.normalize("NFKD", str(s)) if not unicodedata.combining(c))
+
+def _norm_name(s: str) -> str:
+    s = _strip_accents(s)
+    return " ".join(s.strip().upper().split())
+
 # -----------------------------
 # Artefacts
 # -----------------------------
@@ -246,8 +254,12 @@ class RacingDataset(Dataset):
         cat_arrays = []
         for col in self.c_cols:
             vocab = cat_vocab[col]
-            idx = df[col].astype(str).map(vocab).fillna(0).astype(np.int64).values
+            s = df[col].astype(str)
+            if col == "runner_name":
+                s = s.map(_norm_name)
+            idx = s.map(vocab).fillna(0).astype(np.int64).values
             cat_arrays.append(torch.tensor(idx))
+
         self.x_cat = torch.stack(cat_arrays, dim=1) if cat_arrays else torch.empty((len(df), 0), dtype=torch.long)
 
         # Race grouping (prefer race_id; else venue+race_number+date)
@@ -391,46 +403,54 @@ def train_one_epoch(model, loader, criterion, optimiser, device):
 
 def evaluate(model, loader, _criterion, device):
     """
-    Returns: avg_loss (MSE on rank), MAE, RMSE, Spearman (unchanged).
-    We *also* log hit-rate@1 and place hit-rate to stdout for visibility.
+    Returns: avg_loss (MSE on rank), MAE, RMSE, Spearman.
+    Also logs hit-rate@1 for visibility.
     """
     model.eval()
     losses, preds_all, targs_all = [], [], []
-    # extra tracking (optional)
     race_preds: Dict[int, List[Tuple[float, float, int]]] = {}
 
     with torch.no_grad():
         for x_num, x_cat, y_rank, y_win, y_plc, race_idx in _iter_loader(loader, device):
             out = model(x_num, x_cat)
-            loss = nn.functional.mse_loss(out["rank"], y_rank)
+
+            # flatten to 1-D
+            y_rank_flat = y_rank.view(-1)
+            rank_pred_flat = out["rank"].view(-1)
+
+            # mask NaN targets
+            mask = torch.isfinite(y_rank_flat)
+            if mask.sum() == 0:
+                continue
+
+            y_rank_clean = y_rank_flat[mask]
+            rank_pred_clean = rank_pred_flat[mask]
+
+            # proper MSE
+            loss = nn.functional.mse_loss(rank_pred_clean, y_rank_clean)
             losses.append(loss.item())
 
-            pred = out["rank"].detach().cpu().numpy().ravel().astype(float)
-            targ = y_rank.detach().cpu().numpy().ravel().astype(float)
-            preds_all.append(pred); targs_all.append(targ)
+            preds_all.append(rank_pred_clean.cpu().numpy())
+            targs_all.append(y_rank_clean.cpu().numpy())
 
-            # collect winner logits for hit-rate@1
+            # collect win logits for hit-rate@1
             wl = out["win_logit"].detach().cpu().numpy().ravel()
             yw = y_win.detach().cpu().numpy().ravel()
             ri = race_idx.detach().cpu().numpy().ravel()
             for p, is_w, rid in zip(wl, yw, ri):
                 race_preds.setdefault(int(rid), []).append((float(p), float(is_w), 0))
 
-    preds = np.concatenate(preds_all) if preds_all else np.array([])
-    targs = np.concatenate(targs_all) if targs_all else np.array([])
+    if not preds_all or not targs_all:
+        return float(np.mean(losses)) if losses else math.nan, math.nan, math.nan, math.nan
 
-    mask = np.isfinite(preds) & np.isfinite(targs)
-    if mask.sum() == 0:
-        avg_loss = float(np.mean(losses)) if losses else math.nan
-        print("Eval: no finite targets.")
-        return avg_loss, math.nan, math.nan, math.nan
+    preds = np.concatenate(preds_all)
+    targs = np.concatenate(targs_all)
 
-    preds_m = preds[mask]; targs_m = targs[mask]
-    mae = float(mean_absolute_error(targs_m, preds_m))
-    rmse = float(np.sqrt(mean_squared_error(targs_m, preds_m)))
-    rho = float(spearmanr(targs_m, preds_m).correlation)
+    mae = float(mean_absolute_error(targs, preds))
+    rmse = float(np.sqrt(mean_squared_error(targs, preds)))
+    rho = float(spearmanr(targs, preds).correlation)
 
-    # hit-rate@1 from race-wise softmax over win logits
+    # hit-rate@1
     top1_hits = 0; total_races = 0
     for rid, rows in race_preds.items():
         if not rows: continue
@@ -573,16 +593,28 @@ def main():
     X_train_df, X_val_df, X_test_df = X_all.iloc[:i_train_end], X_all.iloc[i_train_end:i_val_end], X_all.iloc[i_val_end:]
     y_train,    y_val,    y_test    = y_all[:i_train_end],      y_all[i_train_end:i_val_end],      y_all[i_val_end:]
 
-    # Categorical vocab (train-only)
+    if "runner_name" in X_train_df.columns:
+        X_train_df.loc[:, "runner_name"] = X_train_df["runner_name"].astype(str).map(_norm_name)
+    if "runner_name" in X_val_df.columns:
+        X_val_df.loc[:, "runner_name"] = X_val_df["runner_name"].astype(str).map(_norm_name)
+    if "runner_name" in X_test_df.columns:
+        X_test_df.loc[:, "runner_name"] = X_test_df["runner_name"].astype(str).map(_norm_name)
+
+
+    # Categorical vocab (train-only)  [runner_name is normalised]
     cat_vocab: Dict[str, Dict[str, int]] = {}
     cat_cardinalities: Dict[str, int] = {}
     for col in categorical_cols:
         if col not in X_train_df.columns:
             continue
-        tokens = X_train_df[col].astype(str).unique().tolist()
-        vocab = {tok: i+1 for i, tok in enumerate(sorted(tokens))}  # 0 for UNK
+        col_series = X_train_df[col].astype(str)
+        if col == "runner_name":
+            col_series = col_series.map(_norm_name)
+        tokens = col_series.unique().tolist()
+        vocab = {tok: i + 1 for i, tok in enumerate(sorted(tokens))}  # 0 is UNK
         cat_vocab[col] = vocab
         cat_cardinalities[col] = len(vocab)
+
 
     # Scaler (train numeric only)
     scaler = StandardScaler()
@@ -749,13 +781,32 @@ def load_model_and_predict(
             col = pd.Series(["UNK"]*len(df_new))
         work[c] = col
 
-    # New horse detection
-    new_horse = np.array([False]*len(work))
+
+    # --- NEW HORSE detection (patched) ---
+    new_horse = np.zeros(len(work), dtype=bool)
     if "runner_name" in art.cat_vocab:
         rn_vocab = art.cat_vocab["runner_name"]
-        mapped = work["runner_name"].astype(str).map(rn_vocab).fillna(0).astype(int)
-        starts = pd.to_numeric(df_new.get("horse_starts_prior"), errors="coerce").fillna(0) if "horse_starts_prior" in df_new.columns else pd.Series([0]*len(work))
-        new_horse = ((mapped == 0) | (starts <= 0)).values
+        mapped = (
+            work["runner_name"].astype(str)
+            .map(_norm_name)
+            .map(rn_vocab)
+            .fillna(0)
+            .astype(int)
+        )
+
+        # Only use starts if the column exists AND we have any non-null values
+        use_starts = False
+        if "horse_starts_prior" in df_new.columns:
+            starts = pd.to_numeric(df_new["horse_starts_prior"], errors="coerce")
+            use_starts = starts.notna().any()
+
+        if use_starts:
+            new_horse = ((mapped == 0) | (starts <= 0)).values
+        else:
+            # No starts available -> rely solely on vocab
+            new_horse = (mapped == 0).values
+
+
 
     # tensors
     num_data = work[art.numeric_cols].astype(np.float32).values
@@ -765,8 +816,12 @@ def load_model_and_predict(
     cat_arrays = []
     for col in art.categorical_cols:
         vocab = art.cat_vocab[col]
-        idx = work[col].astype(str).map(vocab).fillna(0).astype(np.int64).values
+        s = work[col].astype(str)
+        if col == "runner_name":
+            s = s.map(_norm_name)
+        idx = s.map(vocab).fillna(0).astype(np.int64).values
         cat_arrays.append(torch.tensor(idx))
+
     x_cat = torch.stack(cat_arrays, dim=1) if cat_arrays else torch.empty((len(work), 0), dtype=torch.long)
 
     # race grouping for softmax

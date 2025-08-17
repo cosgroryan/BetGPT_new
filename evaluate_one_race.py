@@ -14,12 +14,15 @@ import pandas as pd
 import sys as _sys, pytorch_pre as _pp
 _sys.modules['__main__'] = _pp  # pickle compat for preprocess.pkl
 
-# Use your existing inference helpers
+# Use your existing inference helpers (blended probs/ranks)
 from infer_from_schedule_json import (
     fetch_schedule_json,
     schedule_json_to_df,
-    estimate_position_probs_for_race_df,
+    estimate_position_probs_for_race_df,  # returns blended win_prob/top3_prob/pred_rank
 )
+
+# New: pull NN-only probabilities directly
+from pytorch_pre import load_model_and_predict
 
 # -----------------------------
 # Utils
@@ -115,81 +118,148 @@ def log_loss_win(probs: np.ndarray, winner_pos: int, eps: float = 1e-12) -> floa
     p = float(np.clip(probs[winner_pos], eps, 1.0))
     return float(-np.log(p))
 
+def _fair_odds(p: np.ndarray, eps: float = 1e-12) -> np.ndarray:
+    p = np.clip(p, eps, 1.0)
+    return 1.0 / p
+
+def _percent(p: np.ndarray) -> np.ndarray:
+    return 100.0 * np.asarray(p, dtype=float)
+
 # -----------------------------
 # Main
 # -----------------------------
 
 def main(meet_no: int, race_no: int, date_str: str):
-    # 1) Predict from schedule (model+market blended, tau=0.4 inside helper)
+    # 1) Predict from schedule (blended model/market path)
     sched = fetch_schedule_json(date_str, meet_no, race_no)
     df_sched = schedule_json_to_df(sched)
     if df_sched.empty:
         print("No runners in schedule.")
         return
 
-    preds = estimate_position_probs_for_race_df(df_sched)  # uses tau=0.4 and blend
-    preds["runner_name"] = preds["runner_name"].map(_norm_name)
+    # Keep a copy with normalised names for joins/printing
+    df_sched["_runner_name_norm"] = df_sched["runner_name"].map(_norm_name)
 
-    # 2) Pull results and parse
+    # Blend predictions (existing helper)
+    preds_blend = estimate_position_probs_for_race_df(df_sched)  # includes: win_prob, top3_prob, pred_rank
+    preds_blend["runner_name"] = preds_blend["runner_name"].map(_norm_name)
+    preds_blend.rename(columns={
+        "win_prob": "blend_win_prob",
+        "top3_prob": "blend_top3_prob",
+        "pred_rank": "blend_pred_rank",
+    }, inplace=True)
+
+    # 2) NN-only predictions (new path)
+    nn_out = load_model_and_predict(df_sched)
+    nn_win_prob = np.asarray(nn_out.get("p_win_softmax"))
+    nn_plc_prob = np.asarray(nn_out.get("p_place_sigmoid"))
+    nn_pred_rank = np.asarray(nn_out.get("pred_rank"))
+
+    preds_nn = pd.DataFrame({
+        "runner_name": df_sched["_runner_name_norm"],
+        "nn_win_prob": nn_win_prob,
+        "nn_top3_prob": np.minimum(1.0, np.asarray(nn_plc_prob, dtype=float)),  # leave as-is; you may sub a calibrated top3 if desired
+        "nn_pred_rank": nn_pred_rank,
+    })
+
+    # 3) Merge blend + NN on normalised name
+    preds = preds_blend.merge(preds_nn, on="runner_name", how="outer")
+    # Add convenience percentages and fair odds for both
+    for base in ("blend", "nn"):
+        w = preds[f"{base}_win_prob"].to_numpy(dtype=float)
+        t3 = preds[f"{base}_top3_prob"].to_numpy(dtype=float)
+        preds[f"{base}_win_%"] = _percent(w)
+        preds[f"{base}_win_$fair"] = _fair_odds(w)
+        preds[f"{base}_top3_%"] = _percent(t3)
+        preds[f"{base}_top3_$fair"] = _fair_odds(t3)
+
+    # 4) Pull results and parse
     res = fetch_results_json(date_str, meet_no, race_no)
     df_res = results_to_df(res)
     if df_res.empty:
         print("No official results yet.")
         return
 
-    # 3) Join on name
+    # 5) Join on name
     df = preds.merge(df_res, on="runner_name", how="inner")
     if df.empty:
         print("No name matches between schedule and results.")
         return
 
-    # Ensure numeric arrays for metrics
+    # Ensure numeric arrays for metrics (use NN by default)
     finish_rank = df["finish_rank"].to_numpy()
-    pred_rank = df["pred_rank"].to_numpy()
-    win_prob = df["win_prob"].to_numpy()
+    nn_win_prob_arr = df["nn_win_prob"].to_numpy(dtype=float)
+    blend_win_prob_arr = df["blend_win_prob"].to_numpy(dtype=float)
+    nn_pred_rank_arr = df["nn_pred_rank"].to_numpy(dtype=float)
+    blend_pred_rank_arr = df["blend_pred_rank"].to_numpy(dtype=float)
 
-    # 4) Metrics (use positional indices, not label indices)
+    # 6) Metrics (positional indices)
     winner_pos = int(np.argmin(finish_rank))
-    top_pick_pos = int(np.argmax(win_prob))
-    winner_hit = int(winner_pos == top_pick_pos)
 
-    top3_positions = np.argsort(-win_prob)[:3]
-    top3_hit = int(winner_pos in top3_positions)
-
+    # NN metrics
+    nn_top_pick_pos = int(np.argmax(nn_win_prob_arr))
+    nn_winner_hit = int(winner_pos == nn_top_pick_pos)
+    nn_top3_positions = np.argsort(-nn_win_prob_arr)[:3]
+    nn_top3_hit = int(winner_pos in nn_top3_positions)
     from scipy.stats import spearmanr
-    rho = float(spearmanr(finish_rank, pred_rank).correlation)
+    nn_rho = float(spearmanr(finish_rank, nn_pred_rank_arr).correlation)
+    nn_brier = brier_win(nn_win_prob_arr, winner_pos)
+    nn_logloss = log_loss_win(nn_win_prob_arr, winner_pos)
 
-    brier = brier_win(win_prob, winner_pos)
-    logloss = log_loss_win(win_prob, winner_pos)
+    # Blend metrics (for comparison)
+    bl_top_pick_pos = int(np.argmax(blend_win_prob_arr))
+    bl_winner_hit = int(winner_pos == bl_top_pick_pos)
+    bl_rho = float(spearmanr(finish_rank, blend_pred_rank_arr).correlation)
+    bl_brier = brier_win(blend_win_prob_arr, winner_pos)
+    bl_logloss = log_loss_win(blend_win_prob_arr, winner_pos)
 
-    # 5) Print compact summary row
-    top_pick_name = df.iloc[top_pick_pos]["runner_name"]
+    # 7) Print compact summary rows (NN first)
+    nn_top_pick_name = df.iloc[nn_top_pick_pos]["runner_name"]
+    bl_top_pick_name = df.iloc[bl_top_pick_pos]["runner_name"]
     winner_name = df.iloc[winner_pos]["runner_name"]
-    top_pick_win_pct = round(float(df.iloc[top_pick_pos]["win_%"]), 2)
 
-    summary = pd.DataFrame([{
-        "date": date_str,
-        "meet": meet_no,
-        "race": race_no,
-        "field": len(df),
-        "winner_hit": winner_hit,
-        "top3_hit": top3_hit,
-        "spearman": round(rho, 3),
-        "brier_win": round(brier, 4),
-        "logloss_win": round(logloss, 4),
-        "top_pick": top_pick_name,
-        "top_pick_win_%": top_pick_win_pct,
-        "winner": winner_name,
-    }])
+    nn_top_pick_win_pct = round(float(df.iloc[nn_top_pick_pos]["nn_win_%"]), 2)
+    bl_top_pick_win_pct = round(float(df.iloc[bl_top_pick_pos]["blend_win_%"]), 2)
 
+    summary = pd.DataFrame([
+        {
+            "date": date_str,
+            "meet": meet_no,
+            "race": race_no,
+            "field": len(df),
+            "winner": winner_name,
+            # NN
+            "nn_winner_hit": nn_winner_hit,
+            "nn_spearman": round(nn_rho, 3),
+            "nn_brier_win": round(nn_brier, 4),
+            "nn_logloss_win": round(nn_logloss, 4),
+            "nn_top_pick": nn_top_pick_name,
+            "nn_top_pick_win_%": nn_top_pick_win_pct,
+            # Blend
+            "blend_winner_hit": bl_winner_hit,
+            "blend_spearman": round(bl_rho, 3),
+            "blend_brier_win": round(bl_brier, 4),
+            "blend_logloss_win": round(bl_logloss, 4),
+            "blend_top_pick": bl_top_pick_name,
+            "blend_top_pick_win_%": bl_top_pick_win_pct,
+        }
+    ])
     print(summary.to_string(index=False))
 
-    # 6) Nice tables
+    # 8) Nice tables
     show_cols = [
         "runner_number", "runner_name", "fav_rank",
-        "finish_rank", "pred_rank", "win_%", "win_$fair", "top3_%", "top3_$fair"
+        "finish_rank",
+        # legacy/blend
+        "blend_pred_rank", "blend_win_%", "blend_win_$fair", "blend_top3_%", "blend_top3_$fair",
+        # new NN
+        "nn_pred_rank", "nn_win_%", "nn_win_$fair", "nn_top3_%", "nn_top3_$fair",
     ]
-    # The preds DF carries runner_number (from schedule); keep it if present
+    # Keep runner_number if present from schedule merge (not guaranteed post-merge)
+    if "runner_number" not in df.columns and "runner_number" in df_sched.columns:
+        df = df.merge(df_sched[["_runner_name_norm", "runner_number"]].rename(columns={"_runner_name_norm":"runner_name"}),
+                      on="runner_name", how="left")
+
     for c in show_cols:
         if c not in df.columns:
             df[c] = np.nan
@@ -197,10 +267,13 @@ def main(meet_no: int, race_no: int, date_str: str):
     print("\nActual order (by finish_rank):")
     print(df.sort_values("finish_rank")[show_cols].to_string(index=False))
 
-    print("\nModel order (by win_prob desc):")
-    print(df.sort_values("win_prob", ascending=False)[show_cols].to_string(index=False))
+    print("\nNN order (by nn_win_prob desc):")
+    print(df.sort_values("nn_win_prob", ascending=False)[show_cols].to_string(index=False))
 
-    # 7) Append to CSV log
+    print("\nBlended order (by blend_win_prob desc):")
+    print(df.sort_values("blend_win_prob", ascending=False)[show_cols].to_string(index=False))
+
+    # 9) Append to CSV log (NN-first summary)
     log_path = "eval_log.csv"
     header_needed = not os.path.exists(log_path)
     summary.to_csv(log_path, mode="a", header=header_needed, index=False)
