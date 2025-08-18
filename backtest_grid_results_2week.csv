@@ -1,0 +1,2 @@
+bet_type,w,blend,overround,min_edge,min_kelly,picks,profit,roi,hit_rate,kelly_avg,max_drawdown,sharpe,final_bankroll
+place,0.2,logit,proportional,0.6,1.0,215,6681496.599786101,0.574441835247508,0.4930232558139535,35.087131387385696,-0.8953132217672027,1.1049495426368612,6681596.599786101
