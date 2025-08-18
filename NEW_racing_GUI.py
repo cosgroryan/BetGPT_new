@@ -137,6 +137,13 @@ def merge_prices_into_event(payload, prices_by_number):
         if num and num in prices_by_number:
             r.setdefault("prices", {}).update(prices_by_number[num])
 
+def _norm_name_for_join(s):
+    if s is None: return ""
+    s = str(s).strip().lower()
+    s = "".join(ch for ch in s if ch.isalnum() or ch.isspace())
+    return " ".join(s.split())
+
+
 def build_df_for_model(payload) -> pd.DataFrame:
     """Build the feature set expected by pytorch_pre from the Affiliates event + merged odds."""
     data = payload.get("data") or {}
@@ -311,6 +318,8 @@ class SimpleRaceGUI(tk.Tk):
         ttk.Entry(frm, textvariable=self.race_var, width=6).grid(row=0, column=5, sticky="w", padx=(6, 16))
 
         ttk.Button(frm, text="Fetch", command=self.fetch_and_show).grid(row=0, column=6, sticky="w")
+        ttk.Button(frm, text="Recommend…", command=self.open_recommendations).grid(row=0, column=7, sticky="w", padx=(12, 0))
+
 
         # Header info
         self.header = tk.StringVar(value="")
@@ -350,6 +359,18 @@ class SimpleRaceGUI(tk.Tk):
         self.tree.configure(yscroll=vsb.set)
         self.tree.pack(side="left", fill="both", expand=True)
         vsb.pack(side="right", fill="y")
+
+        # at the top of __init__
+        self._last_event = None
+        self._last_recs_data = None
+
+    def open_recommendations(self):
+        if not self._last_recs_data:
+            messagebox.showinfo("Recommendations", "Fetch a race first.")
+            return
+        RecommendationWindow(self, self._last_recs_data)
+
+
 
     def fetch_and_show(self):
         # Local import so the GUI can run even if CLI script changes
@@ -499,10 +520,281 @@ class SimpleRaceGUI(tk.Tk):
                     ),
                 )
 
+                # cache for recommender popout
+                self._last_event = event
+                rows_for_recs = []
+                for r in runners:
+                    num = _safe_int(r.get("runner_number") or r.get("number"))
+                    name = r.get("name") or ""
+                    prices = r.get("prices") or {}
+                    odds_obj = r.get("odds") or {}
+
+                    win_fx   = odds_obj.get("fixed_win",  prices.get("win_fixed"))
+                    pl_fx    = odds_obj.get("fixed_place", prices.get("place_fixed"))
+                    win_tote = prices.get("win_tote")
+                    pl_tote  = prices.get("place_tote")
+
+                    imp_win = _imp_from_fixed(win_fx)
+                    key = _norm_name_for_join(name)
+                    model_p = name2p.get(key)
+                    if model_p is None and num is not None:
+                        model_p = num2p.get(num)
+
+                    rows_for_recs.append({
+                        "runner_number": num,
+                        "runner_name": name,
+                        "model_p": model_p if model_p is not None else 0.0,
+                        "imp_p_fixed": imp_win if imp_win is not None else None,
+                        "fixed_win": float(win_fx) if win_fx else None,
+                        "fixed_place": float(pl_fx) if pl_fx else None,
+                        "tote_win": float(win_tote) if win_tote else None,
+                        "tote_place": float(pl_tote) if pl_tote else None,
+                    })
+                self._last_recs_data = {
+                    "race_meta": {
+                        "positions_paid": race.get("positions_paid") or 3,
+                        "field_size": len(runners),
+                    },
+                    "rows": rows_for_recs,
+}
+
+
         except Exception as e:
             messagebox.showerror("Error", str(e))
 
+class RecommendationWindow(tk.Toplevel):
+    """
+    Value overlay popout with market-model blending.
 
+    p_mkt is de-overrounded market probability from selected market.
+    p_blend = w * p_model + (1-w) * p_mkt      [linear]
+           or sigmoid( w*logit(p_model) + (1-w)*logit(p_mkt) )  [logit]
+    Bets and Kelly are computed using p_blend against the chosen market odds.
+    """
+    def __init__(self, parent, recs_pack):
+        super().__init__(parent)
+        self.parent = parent
+        self.title("Value Recommendations")
+        self.geometry("1040x680")
+        self.configure(bg="#f6fbff")
+
+        self.recs_pack = recs_pack  # {"race_meta": {...}, "rows": [...]}
+
+        # ===== Controls =====
+        ctrl = ttk.Frame(self, padding=10)
+        ctrl.pack(fill="x")
+
+        # Markets
+        ttk.Label(ctrl, text="Win market").grid(row=0, column=0, sticky="w")
+        self.win_source = tk.StringVar(value="fixed")
+        ttk.Combobox(ctrl, textvariable=self.win_source, width=8, state="readonly",
+                     values=["fixed", "tote"]).grid(row=0, column=1, sticky="w", padx=(6, 16))
+
+        ttk.Label(ctrl, text="Overround").grid(row=0, column=2, sticky="w")
+        self.or_method = tk.StringVar(value="proportional")
+        ttk.Combobox(ctrl, textvariable=self.or_method, width=13, state="readonly",
+                     values=["proportional", "power(α=0.9)", "none"]).grid(row=0, column=3, sticky="w", padx=(6, 16))
+
+        # Blend
+        ttk.Label(ctrl, text="Blend mode").grid(row=0, column=4, sticky="w")
+        self.blend_mode = tk.StringVar(value="logit")
+        ttk.Combobox(ctrl, textvariable=self.blend_mode, width=8, state="readonly",
+                     values=["linear", "logit"]).grid(row=0, column=5, sticky="w", padx=(6, 16))
+
+        ttk.Label(ctrl, text="Model weight w").grid(row=0, column=6, sticky="w")
+        self.model_w = tk.DoubleVar(value=0.4)  # start conservative to favour market
+        ttk.Entry(ctrl, textvariable=self.model_w, width=6).grid(row=0, column=7, sticky="w", padx=(6, 16))
+
+        # Bankroll & Kelly
+        ttk.Label(ctrl, text="Bankroll").grid(row=1, column=0, sticky="w", pady=(8,0))
+        self.bankroll = tk.DoubleVar(value=1000.0)
+        ttk.Entry(ctrl, textvariable=self.bankroll, width=10).grid(row=1, column=1, sticky="w", padx=(6, 16), pady=(8,0))
+
+        ttk.Label(ctrl, text="Kelly fraction").grid(row=1, column=2, sticky="w", pady=(8,0))
+        self.kelly_frac = tk.DoubleVar(value=0.25)
+        ttk.Entry(ctrl, textvariable=self.kelly_frac, width=6).grid(row=1, column=3, sticky="w", padx=(6, 16), pady=(8,0))
+
+        # Thresholds
+        ttk.Label(ctrl, text="Min edge %").grid(row=1, column=4, sticky="w", pady=(8,0))
+        self.min_edge_pct = tk.DoubleVar(value=1.0)  # softer now we shrink to market
+        ttk.Entry(ctrl, textvariable=self.min_edge_pct, width=8).grid(row=1, column=5, sticky="w", padx=(6, 16), pady=(8,0))
+
+        ttk.Label(ctrl, text="Min Kelly %").grid(row=1, column=6, sticky="w", pady=(8,0))
+        self.min_kelly_pct = tk.DoubleVar(value=0.3)
+        ttk.Entry(ctrl, textvariable=self.min_kelly_pct, width=8).grid(row=1, column=7, sticky="w", padx=(6, 16), pady=(8,0))
+
+        ttk.Label(ctrl, text="Max picks").grid(row=1, column=8, sticky="w", pady=(8,0))
+        self.max_picks = tk.IntVar(value=4)
+        ttk.Entry(ctrl, textvariable=self.max_picks, width=6).grid(row=1, column=9, sticky="w", padx=(6, 16), pady=(8,0))
+
+        ttk.Button(ctrl, text="Refresh", command=self.refresh).grid(row=1, column=10, sticky="e")
+
+        # ===== Table =====
+        table_frame = ttk.Frame(self, padding=(10, 6))
+        table_frame.pack(fill="both", expand=True)
+
+        cols = ("no","name","mkt","odds","mkt%","model%","blend%","edge%","fair","kelly%","stake")
+        headers = ["#","Runner","Market","Odds","Market%","Model%","Blend%","Edge%","Fair","Kelly%","Stake"]
+        self.tree = ttk.Treeview(table_frame, columns=cols, show="headings", height=20)
+        for c, h in zip(cols, headers):
+            self.tree.heading(c, text=h)
+        widths = [50, 240, 80, 70, 80, 80, 80, 70, 70, 70, 90]
+        anchors = ["center","w","center","center","center","center","center","center","center","center","center"]
+        for (c, w, a) in zip(cols, widths, anchors):
+            self.tree.column(c, width=w, anchor=a)
+        vsb = ttk.Scrollbar(table_frame, orient="vertical", command=self.tree.yview)
+        self.tree.configure(yscroll=vsb.set)
+        self.tree.pack(side="left", fill="both", expand=True)
+        vsb.pack(side="right", fill="y")
+
+        self.refresh()
+
+    # ===== maths helpers =====
+    @staticmethod
+    def _implied_from_odds(od):
+        try:
+            od = float(od)
+            return 1.0/od if od and od > 1.0 else None
+        except Exception:
+            return None
+
+    @staticmethod
+    def _deoverround_proportional(probs):
+        s = np.nansum(probs)
+        if not np.isfinite(s) or s <= 0:
+            return probs
+        return probs / s
+
+    @staticmethod
+    def _deoverround_power(probs, alpha=0.9):
+        # power method often shrinks longshots toward zero a touch more
+        p = np.power(np.clip(probs, 1e-12, 1.0), alpha)
+        s = np.nansum(p)
+        return p / s if s > 0 else probs
+
+    @staticmethod
+    def _logit(p):
+        p = np.clip(p, 1e-12, 1-1e-12)
+        return np.log(p/(1-p))
+
+    @staticmethod
+    def _sigmoid(x):
+        return 1.0/(1.0 + np.exp(-x))
+
+    @staticmethod
+    def _kelly_pct(p, odds_dec):
+        try:
+            if p is None or odds_dec is None or odds_dec <= 1.0:
+                return 0.0
+            b = float(odds_dec) - 1.0
+            p = float(p)
+            q = 1.0 - p
+            k = (b*p - q) / b
+            return max(0.0, 100.0 * k)
+        except Exception:
+            return 0.0
+
+    # ===== core =====
+    def refresh(self):
+        self.tree.delete(*self.tree.get_children())
+        rows = self.recs_pack.get("rows") or []
+
+        # read controls
+        use_fixed = (self.win_source.get() == "fixed")
+        bankroll = max(0.0, float(self.bankroll.get() or 0.0))
+        frac = max(0.0, min(1.0, float(self.kelly_frac.get() or 0.0)))
+        min_edge = float(self.min_edge_pct.get() or 0.0)
+        min_kelly = float(self.min_kelly_pct.get() or 0.0)
+        max_picks = int(self.max_picks.get() or 9999)
+        w = max(0.0, min(1.0, float(self.model_w.get() or 0.0)))
+        blend_mode = self.blend_mode.get()
+        or_method = self.or_method.get()
+
+        # Build market implied vector, then de-overround
+        odds_list = []
+        model_p_list = []
+        for r in rows:
+            odds = r["fixed_win"] if use_fixed else r["tote_win"]
+            odds_list.append(odds)
+            model_p_list.append(float(r.get("model_p") or 0.0))
+        mkt_probs = np.array([self._implied_from_odds(od) for od in odds_list], dtype=float)
+
+        if or_method == "proportional":
+            mkt_probs = self._deoverround_proportional(mkt_probs)
+        elif or_method.startswith("power"):
+            mkt_probs = self._deoverround_power(mkt_probs, alpha=0.9)
+        # else "none" keeps raw implied 1/odds
+
+        model_probs = np.array(model_p_list, dtype=float)
+        # normalise tiny negatives
+        model_probs = np.clip(model_probs, 0.0, 1.0)
+
+        # Blend
+        if blend_mode == "linear":
+            blend_probs = w*model_probs + (1.0-w)*mkt_probs
+        else:
+            # logit-space blend
+            z = w*self._logit(model_probs) + (1.0-w)*self._logit(mkt_probs)
+            blend_probs = self._sigmoid(z)
+
+        # compute outputs per runner
+        recs = []
+        for idx, r in enumerate(rows):
+            num  = r["runner_number"]
+            name = r["runner_name"]
+            odds = r["fixed_win"] if use_fixed else r["tote_win"]
+            mkt = "Fixed" if use_fixed else "Tote"
+
+            p_mkt = mkt_probs[idx]
+            p_mod = model_probs[idx]
+            p_bl  = blend_probs[idx]
+
+            imp = self._implied_from_odds(odds)
+            if imp is None or odds is None or p_bl <= 0.0:
+                edge_pct = 0.0
+                kelly_pct = 0.0
+                fair = ""
+            else:
+                # edge vs chosen market odds using blended probability
+                edge_pct = 100.0 * (p_bl - imp)
+                kelly_pct = self._kelly_pct(p_bl, odds)
+                fair = f"{1.0/max(p_bl,1e-9):.2f}"
+
+            if edge_pct >= min_edge and kelly_pct >= min_kelly:
+                stake = bankroll * (kelly_pct/100.0) * frac
+                recs.append((
+                    edge_pct,          # sort key
+                    num, name, mkt, odds,
+                    100.0*p_mkt,       # show market%
+                    100.0*p_mod,       # model%
+                    100.0*p_bl,        # blend%
+                    fair,
+                    kelly_pct,
+                    stake
+                ))
+
+        recs.sort(key=lambda t: (t[0], t[9]), reverse=True)
+        recs = recs[:max_picks]
+
+        for item in recs:
+            (_, num, name, mkt, odds, mkt_pct, mod_pct, bl_pct, fair, kelly_pct, stake) = item
+            self.tree.insert(
+                "",
+                "end",
+                values=(
+                    num or "",
+                    name,
+                    mkt,
+                    f"{odds:g}" if odds else "",
+                    f"{mkt_pct:.1f}",
+                    f"{mod_pct:.1f}",
+                    f"{bl_pct:.1f}",
+                    f"{item[0]:.1f}",      # edge%
+                    fair,
+                    f"{kelly_pct:.1f}",
+                    f"{stake:.2f}",
+                ),
+            )
 
 if __name__ == "__main__":
     app = SimpleRaceGUI()
