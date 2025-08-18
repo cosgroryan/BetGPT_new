@@ -96,6 +96,30 @@ def recommend_for_race(meet_no: int, race_no: int, date_str: str):
     lines.append("")  # blank line
     return "\n".join(lines)
 
+# --- Library helper for GUIs / other callers ---
+def model_win_table(meet_no: int, race_no: int, date_str: str) -> pd.DataFrame:
+    """Return per-runner model probabilities for one race."""
+    sched = fetch_schedule_json(date_str, meet_no, race_no)
+    df = schedule_json_to_df(sched)
+    if df.empty:
+        return pd.DataFrame(columns=["runner_number","runner_name","p_win","win_%","new_horse"])
+
+    p_win = _nn_win_probs_for_race(df)
+    try:
+        nn_out = load_model_and_predict(df)
+        new_horse = np.asarray(nn_out.get("new_horse"), dtype=bool) if isinstance(nn_out, dict) else np.zeros(len(df), dtype=bool)
+    except Exception:
+        new_horse = np.zeros(len(df), dtype=bool)
+
+    out = pd.DataFrame({
+        "runner_number": df.get("runner_number", pd.Series([None]*len(df))),
+        "runner_name": df.get("runner_name", pd.Series([None]*len(df))),
+        "p_win": p_win,
+        "win_%": 100.0 * p_win,
+        "new_horse": new_horse,
+    })
+    return out
+
 
 def main():
     parser = argparse.ArgumentParser(description="Recommend picks using the NN model.")

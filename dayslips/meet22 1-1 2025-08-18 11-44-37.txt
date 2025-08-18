@@ -1,0 +1,20 @@
+===========================
+2025-08-18 | Meet 22 Race 1
+===========================
+Top pick: #1 BARRON  |  Model win 0.0%  |  Fair $1000000000000.00
+
+Model order:
+ runner_number        runner_name fav_rank win_%        $fair_win  new_horse
+             1             BARRON     None   0.0 1000000000000.00      False
+             2         BUSTERKICK     None   0.0 1000000000000.00      False
+             3        DOINGITEASY     None   0.0 1000000000000.00      False
+             4           HEZANUFF     None   0.0 1000000000000.00      False
+             5 PATRIOTICINTENTION     None   0.0 1000000000000.00      False
+             6  RIGHTEOUS BROTHER     None   0.0 1000000000000.00      False
+             7          VENDEMMIA     None   0.0 1000000000000.00      False
+             8          BOLD ZARA     None   0.0 1000000000000.00       True
+            11       GERRY'S PICK     None   0.0 1000000000000.00      False
+            12    SASKATOON BERRY     None   0.0 1000000000000.00      False
+            13            SO SAIN     None   0.0 1000000000000.00      False
+            14    COME ON GLAMOUR     None   0.0 1000000000000.00       True
+            16           ICEWATER     None   0.0 1000000000000.00       True

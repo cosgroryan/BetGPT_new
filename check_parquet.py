@@ -3,7 +3,7 @@ import pandas as pd
 # Path to your parquet file
 file_path = "five_year_dataset.parquet"
 
-# Load only the metadata to avoid loading the full dataset into memory
+# Load the dataset
 df = pd.read_parquet(file_path)
 
 # Display column names and their datatypes
@@ -17,3 +17,8 @@ print(df.head())
 # If you also want basic stats for numeric columns
 print("\n=== Numeric Column Summary ===")
 print(df.describe())
+
+# Save the first 100 rows to CSV
+output_path = "first_100_rows.csv"
+df.head(100).to_csv(output_path, index=False)
+print(f"\n✅ First 100 rows saved to {output_path}")

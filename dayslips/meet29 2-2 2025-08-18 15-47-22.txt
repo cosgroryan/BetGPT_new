@@ -1,0 +1,15 @@
+===========================
+2025-08-18 | Meet 29 Race 2
+===========================
+Top pick: #2 C'MON WICKSY  |  Model win 18.0%  |  Fair $5.54  |  NEW HORSE
+
+Model order:
+ runner_number    runner_name fav_rank win_% $fair_win  new_horse
+             2   C'MON WICKSY     None  18.0      5.54       True
+             6     MOSCA LUNA     None  15.5      6.46      False
+             8 ROCK ALL NIGHT     None  14.4      6.94      False
+             1     BON TO RUN     None  13.1      7.63      False
+             9        VESTIGE     None  12.9      7.77      False
+             4     BRANDYWINE     None  11.1      8.97      False
+             3   CARAVANSERAI     None   8.2     12.12      False
+            10  WINNING REIGN     None   6.7     14.91      False

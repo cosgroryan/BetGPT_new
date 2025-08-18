@@ -1,0 +1,103 @@
+*** a/NEW_racing_GUI.py
+--- b/NEW_racing_GUI.py
+@@
+-from recommend_picks_NN import (
+-    fetch_schedule_json,       # API call + shaping the payload
+-    schedule_json_to_df,       # turns payload -> model-ready DF (with odds columns)
+-    _nn_win_probs_for_race,    # robust NN p(win) (softmax -> PL fallback) you trust
+-)
++from recommend_picks_NN import (
++    fetch_schedule_json,       # API call + shaping the payload
++    schedule_json_to_df,       # turns payload -> model-ready DF (with odds columns)
++    _nn_win_probs_for_race as _nn_win_probs_from_cli,  # keep original name distinct
++)
+@@
+-# ====================== Model probability extraction =======================
++# ====================== Model probability extraction =======================
+@@
+-def _nn_win_probs_for_df(df: pd.DataFrame) -> np.ndarray:
++def _nn_win_probs_for_df(df: pd.DataFrame) -> np.ndarray:
+@@
+     return np.full(n, 1.0 / max(1, n), dtype=float)
++
++# Unified, robust model-prob wrapper:
++def get_model_win_probs(df: pd.DataFrame) -> np.ndarray:
++    """
++    Try the CLI helper (recommend_picks_NN) first, then fall back to the local
++    pytorch_pre paths. Always returns a length-N vector that sums to 1.
++    """
++    n = len(df)
++    # 1) Try CLI wrapper if available
++    try:
++        if _nn_win_probs_from_cli is not None:
++            p = np.asarray(_nn_win_probs_from_cli(df), dtype=float)
++            p[~np.isfinite(p)] = 0.0
++            s = p.sum()
++            if n and p.size == n and s > 0:
++                return p / s
++    except Exception:
++        pass
++    # 2) Fall back to local pytorch_pre helpers
++    return _nn_win_probs_for_df(df)
+@@
+     def on_fetch_and_run(self):
+@@
+-        # --- FETCH ODDS DIRECTLY ---
++        # --- FETCH ODDS DIRECTLY ---
+         self.set_status("Fetching odds…")
+         try:
+             payload = fetch_odds_json(self.session, date_str, meetno, raceno)
+             odds_df = odds_json_to_df(payload)  # runner_number, runner_name, ff_win, win
+         except Exception as e:
+             messagebox.showerror("Error", f"Failed to fetch odds: {e}")
+             self.set_status("Error")
+             return
+-
+-        if odds_df.empty:
+-            messagebox.showwarning("No odds", "No odds returned for this race.")
+-            self.set_status("Ready")
+-            return
++        # Fallback: use schedule endpoint (often carries odds) if direct odds empty
++        if odds_df.empty:
++            try:
++                sched = fetch_schedule_json(self.session, date_str, meetno, raceno)
++                sched_df = schedule_json_to_df(sched)  # must include runner_number, runner_name and any of ff_win/win
++                # Keep just the columns we display/use
++                keep = [c for c in ["runner_number", "runner_name", "ff_win", "win"] if c in sched_df.columns]
++                odds_df = sched_df.loc[:, keep].copy()
++            except Exception:
++                pass
++        if odds_df.empty:
++            messagebox.showwarning("No odds", "No odds returned for this race (odds + schedule both empty).")
++            self.set_status("Ready")
++            return
+@@
+-        # --- RUN MODEL (your robust helper) ---
++        # --- RUN MODEL (robust wrapper) ---
+         self.set_status("Running model…")
+         try:
+-            p_model = _nn_win_probs_for_race(model_df)  # 1-D np.array, sums to 1
++            p_model = get_model_win_probs(model_df)  # 1-D np.array, sums to 1
+         except Exception as e:
+             tb = traceback.format_exc()
+             messagebox.showerror("Model error", f"Failed to run model: {e}\n\n{tb}")
+             self.set_status("Error")
+             return
+@@
+         self.rec_txt.delete("1.0", "end")
+         if picks.empty:
+             self.rec_txt.insert("1.0", "No picks met the thresholds.")
+-            self.rec_txt.insert("end", "Try lowering dp or Min EV, or increasing top N.")
++            self.rec_txt.insert("end", "\nTry lowering dp or Min EV, or increasing top N.")
+             return
+-
+-        lines = ["Recommendations:"]
++        lines = ["Recommendations:"]
+         for _, r in picks.iterrows():
+             stake_pct = r["Kelly_final"] * kf * 100.0
+-            lines.append(
++            lines.append(
+                 f"# {int(r['#'])} {r['Runner']}  @ ${r['ff_win']:.2f}  | p_final={r['p_final']:.3f}  dp={r['dp']:.3f}  EV={r['EV_final']:.3f}  stake≈{stake_pct:.1f}% of bankroll"
+             )
+-        self.rec_txt.insert("1.0", "".join(lines))
++        self.rec_txt.insert("1.0", "\n".join(lines))

@@ -1,0 +1,13 @@
+===========================
+2025-08-18 | Meet 29 Race 1
+===========================
+Top pick: #5 BLARNEY STONE  |  Model win 21.4%  |  Fair $4.68
+
+Model order:
+ runner_number     runner_name fav_rank win_% $fair_win  new_horse
+             5   BLARNEY STONE     None  21.4      4.68      False
+             4         ZOUFAME     None  21.3      4.69       True
+             1  WHISKEY GEORGE     None  18.1      5.51      False
+             6       TWIN GIFT     None  17.6      5.67       True
+             8 WILLIAM'S SMILE     None  14.9      6.71      False
+             2          KUWAIT     None   6.6     15.06      False

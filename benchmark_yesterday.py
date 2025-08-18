@@ -51,18 +51,41 @@ def _text(o) -> str:
     return str(o).strip().lower()
 
 def is_gallops_meeting(m: dict) -> bool:
-    # Prefer explicit section/code/category
-    for k in ("section","code","category","sport","type","discipline"):
+    """
+    Return True if the meeting is a thoroughbred (gallops) meeting.
+
+    New schedule JSONs expose `domain` and `event_type` codes.
+    For gallops we expect: domain="HORSE" and event_type="G".
+    """
+    dom = str(m.get("domain") or "").strip().upper()
+    evt = str(m.get("event_type") or "").strip().upper()
+
+    if dom == "HORSE" and evt == "G":
+        return True
+    if dom in {"DOG", "GREYHOUND"} or evt in {"GR"}:
+        return False
+    if dom in {"HARNESS"} or evt in {"H"}:
+        return False
+
+    # --- Fallback (older feeds or unknowns) ---
+    for k in ("section", "code", "category", "sport", "type", "discipline"):
         s = _text(m.get(k))
-        if any(x in s for x in GALLOPS_KEYS): return True
-        if any(x in s for x in DOG_KEYS + HARNESS_KEYS): return False
-    # Fallback: scan races for harness/grey keywords
+        if any(x in s for x in GALLOPS_KEYS):
+            return True
+        if any(x in s for x in DOG_KEYS + HARNESS_KEYS):
+            return False
+
     for r in (m.get("races") or []):
         name = _text(r.get("name") or r.get("raceName"))
         klass = _text(r.get("class"))
-        if any(x in name or x in klass for x in HARNESS_KEYS + DOG_KEYS):
+        if any(x in name for x in DOG_KEYS + HARNESS_KEYS):
             return False
-    return True  # default assume gallops
+        if any(x in name for x in GALLOPS_KEYS):
+            return True
+
+    # Default: assume gallops if nothing matches
+    return True
+
 
 # ---------------- Results parsing ----------------
 def fetch_results_race(day: str, meet_no: int, race_no: int) -> Optional[dict]:

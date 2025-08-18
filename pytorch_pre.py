@@ -128,6 +128,15 @@ def emb_dim_rule(n_unique: int) -> int:
     """Heuristic for embedding dims; caps at 50, sublinear growth."""
     return int(min(50, round(1.6 * (n_unique ** 0.56))))
 
+def _race_key_fallback(df: pd.DataFrame) -> pd.Series:
+    n = len(df)
+    mv = df["meeting_venue"] if "meeting_venue" in df.columns else pd.Series([""] * n, index=df.index)
+    rn = df["race_number"]   if "race_number"   in df.columns else pd.Series([0]  * n, index=df.index)
+    dt_src = df["date"]      if "date"          in df.columns else pd.Series([None] * n, index=df.index)
+    dt = pd.to_datetime(dt_src, errors="coerce").dt.strftime("%Y-%m-%d")
+    return mv.astype(str) + "|" + rn.astype(str) + "|" + dt
+
+
 def _coerce_numeric_series(s: pd.Series) -> pd.Series:
     if pd.api.types.is_numeric_dtype(s):
         return s.astype(float)
@@ -266,11 +275,7 @@ class RacingDataset(Dataset):
         if "race_id" in df.columns and df["race_id"].notna().any():
             key = df["race_id"].astype(str)
         else:
-            key = (
-                (df.get("meeting_venue") or pd.Series([""]*len(df))).astype(str) + "|" +
-                (df.get("race_number") or pd.Series([0]*len(df))).astype(str) + "|" +
-                pd.to_datetime(df.get("date"), errors="coerce").dt.strftime("%Y-%m-%d")
-            )
+            key = _race_key_fallback(df)
         # map to contiguous ints
         _, race_idx = np.unique(key.values, return_inverse=True)
         self.race_idx = torch.tensor(race_idx.astype(np.int64))
@@ -524,20 +529,40 @@ def main():
     os.makedirs("artifacts", exist_ok=True)
 
     # Load
+        # Load
     df = pd.read_parquet(args.data)
 
-    # Filter scratches
+    # --- NEW: restrict to horse gallops only ---
+    if "domain" in df.columns:
+        df = df[df["domain"].astype(str).str.upper() == "HORSE"]
+    if "event_type" in df.columns:
+        df = df[df["event_type"].astype(str).str.upper() == "G"]
+
+    # Filter scratches (if present)
     if "is_scratched" in df.columns:
         df = df[~_to_bool_mask_any(df["is_scratched"])].copy()
 
-    # Expect date
+    # Target + date must exist
+    if "finish_rank" not in df.columns:
+        raise ValueError("Expected 'finish_rank' column for regression target.")
     if "date" not in df.columns:
         raise ValueError("Expected 'date' column for chronological split and form features.")
+
+    # Drop rows without target/date
+    df["date"] = pd.to_datetime(df["date"], errors="coerce")
+    df = df[df["date"].notna()].copy()
+    df["finish_rank"] = pd.to_numeric(df["finish_rank"], errors="coerce")
+    df = df[df["finish_rank"].notna()].copy()
+
+    # Early sanity check after filtering
+    if len(df) == 0:
+        raise ValueError("No rows remain after filtering (domain=HORSE, event_type=G, scratches, valid date/target).")
 
     # Form features (leak-safe)
     form_feat = build_horse_form_features(df)
     df = pd.concat([df, form_feat], axis=1)
 
+    # Extend numerics with form features (only those that exist)
     form_numeric = [
         "horse_starts_prior","horse_win_rate_prior","horse_top3_rate_prior",
         "horse_avg_finish_prior","horse_last_finish","horse_avg_fav_rank_prior",
@@ -545,53 +570,64 @@ def main():
     ]
     numeric_cols = list(dict.fromkeys(numeric_cols + [c for c in form_numeric if c in df.columns]))
 
-    # Target: finish_rank
-    if "finish_rank" not in df.columns:
-        raise ValueError("Expected 'finish_rank' column for regression target.")
-    y_all = pd.to_numeric(df["finish_rank"], errors="coerce").values
+    # Target
+    y_all = df["finish_rank"].astype(float).values
 
-    # Build working feature frame (keep runner_name for embeddings)
-    keep_cols = [c for c in (numeric_cols + categorical_cols + ["finish_rank","positions_paid","race_id","date","meeting_venue","race_number"]) if c in df.columns]
+    # Build working feature frame
+    keep_cols = [c for c in (numeric_cols + categorical_cols + [
+        "finish_rank","positions_paid","race_id","date","meeting_venue","race_number"
+    ]) if c in df.columns]
     X_all = df[keep_cols].copy()
 
-    # --- De-duplicate any duplicate-named columns (keep first) ---
+    # De-duplicate any duplicate-named columns (keep first)
     dup_mask = X_all.columns.duplicated(keep="first")
     if dup_mask.any():
-        kept = X_all.columns[~dup_mask].tolist()
         dropped = X_all.columns[dup_mask].tolist()
         print(f"[warn] Dropping duplicate-named columns (kept first): {dropped}")
         X_all = X_all.loc[:, ~dup_mask]
 
-    #Impute
+    # --- HARDENED IMPUTATION: ensure no numeric column stays all-NaN ---
     for c in numeric_cols:
         if c in X_all.columns:
             s = _ensure_series_1d(X_all[c], X_all.index)
-            # robust numeric coercion (handles strings like "1200m" or "NZ$ 50,000")
             if pd.api.types.is_numeric_dtype(s):
                 s_num = s.astype(float)
             else:
-                s_str = s.astype(str)
-                s_num = pd.to_numeric(s_str.str.extract(r'([+-]?\d+(?:\.\d+)?)', expand=False), errors="coerce")
-            X_all[c] = s_num.fillna(s_num.median())
+                s_num = pd.to_numeric(
+                    s.astype(str).str.extract(r'([+-]?\d+(?:\.\d+)?)', expand=False),
+                    errors="coerce",
+                )
+            med = np.nanmedian(s_num.values)
+            if np.isnan(med):
+                med = 0.0  # safe fallback if entire column is NaN
+            X_all[c] = s_num.fillna(med)
 
     for c in categorical_cols:
         if c in X_all.columns:
             s = _ensure_series_1d(X_all[c], X_all.index)
             X_all[c] = s.astype(str).fillna("UNK").replace({"nan": "UNK"})
 
-
-    # Chronological split: 70/15/15
-    X_all["_date"] = pd.to_datetime(df["date"], errors="coerce")
+    # Chronological split: 70/15/15 (drop rows without _date just in case)
+    X_all["_date"] = pd.to_datetime(X_all["date"], errors="coerce")
+    X_all = X_all[X_all["_date"].notna()].copy()
     order = np.argsort(X_all["_date"].values.astype("datetime64[ns]"))
     X_all = X_all.iloc[order]
     y_all = y_all[order]
 
     n = len(X_all)
+    if n < 10:
+        raise ValueError(f"Too few rows after filtering/imputation: n={n}. Need more data for a sane split.")
+
     i_train_end = int(0.70 * n)
     i_val_end   = int(0.85 * n)
 
     X_train_df, X_val_df, X_test_df = X_all.iloc[:i_train_end], X_all.iloc[i_train_end:i_val_end], X_all.iloc[i_val_end:]
     y_train,    y_val,    y_test    = y_all[:i_train_end],      y_all[i_train_end:i_val_end],      y_all[i_val_end:]
+
+    # Make sure splits are non-empty
+    if len(X_train_df) == 0 or len(X_val_df) == 0 or len(X_test_df) == 0:
+        raise ValueError(f"Empty split(s): train={len(X_train_df)}, val={len(X_val_df)}, test={len(X_test_df)}. "
+                         "Reduce filtering or adjust split ratios.")
 
     if "runner_name" in X_train_df.columns:
         X_train_df.loc[:, "runner_name"] = X_train_df["runner_name"].astype(str).map(_norm_name)
@@ -749,6 +785,7 @@ def _as_loader_like(ds: RacingDataset, batch: int = 4096):
 # -----------------------------
 # Inference utility (keeps name/signature)
 # -----------------------------
+
 def load_model_and_predict(
     df_new: pd.DataFrame,
     model_path: str = "artifacts/model_regression.pth",
@@ -765,7 +802,8 @@ def load_model_and_predict(
     with open(artefacts_path, "rb") as f:
         art: PreprocessArtifacts = pickle.load(f)
 
-    work = pd.DataFrame()
+    work = pd.DataFrame(index=df_new.index)
+
     # numeric
     for c in art.numeric_cols:
         if c in df_new.columns:
@@ -773,16 +811,16 @@ def load_model_and_predict(
             work[c] = col.fillna(col.median())
         else:
             work[c] = 0.0
+
     # categoricals
     for c in art.categorical_cols:
         if c in df_new.columns:
-            col = df_new[c].astype(str).fillna("UNK").replace({"nan":"UNK"})
+            col = df_new[c].astype(str).fillna("UNK").replace({"nan": "UNK"})
         else:
-            col = pd.Series(["UNK"]*len(df_new))
+            col = pd.Series(["UNK"] * len(df_new), index=df_new.index)
         work[c] = col
 
-
-    # --- NEW HORSE detection (patched) ---
+    # NEW HORSE detection
     new_horse = np.zeros(len(work), dtype=bool)
     if "runner_name" in art.cat_vocab:
         rn_vocab = art.cat_vocab["runner_name"]
@@ -794,7 +832,6 @@ def load_model_and_predict(
             .astype(int)
         )
 
-        # Only use starts if the column exists AND we have any non-null values
         use_starts = False
         if "horse_starts_prior" in df_new.columns:
             starts = pd.to_numeric(df_new["horse_starts_prior"], errors="coerce")
@@ -803,10 +840,7 @@ def load_model_and_predict(
         if use_starts:
             new_horse = ((mapped == 0) | (starts <= 0)).values
         else:
-            # No starts available -> rely solely on vocab
             new_horse = (mapped == 0).values
-
-
 
     # tensors
     num_data = work[art.numeric_cols].astype(np.float32).values
@@ -821,24 +855,27 @@ def load_model_and_predict(
             s = s.map(_norm_name)
         idx = s.map(vocab).fillna(0).astype(np.int64).values
         cat_arrays.append(torch.tensor(idx))
-
     x_cat = torch.stack(cat_arrays, dim=1) if cat_arrays else torch.empty((len(work), 0), dtype=torch.long)
 
-    # race grouping for softmax
+    # race grouping for softmax (NO 'or' on Series)
     if "race_id" in df_new.columns and df_new["race_id"].notna().any():
         key = df_new["race_id"].astype(str)
     else:
-        key = (
-            (df_new.get("meeting_venue") or pd.Series([""]*len(df_new))).astype(str) + "|" +
-            (df_new.get("race_number") or pd.Series([0]*len(df_new))).astype(str) + "|" +
-            pd.to_datetime(df_new.get("date"), errors="coerce").dt.strftime("%Y-%m-%d")
-        )
+        mv = df_new["meeting_venue"] if "meeting_venue" in df_new.columns \
+             else pd.Series([""] * len(df_new), index=df_new.index)
+        rn = df_new["race_number"] if "race_number" in df_new.columns \
+             else pd.Series([0] * len(df_new), index=df_new.index)
+        dt_src = df_new["date"] if "date" in df_new.columns \
+                 else pd.Series([None] * len(df_new), index=df_new.index)
+        dt = pd.to_datetime(dt_src, errors="coerce").dt.strftime("%Y-%m-%d")
+        key = mv.astype(str) + "|" + rn.astype(str) + "|" + dt
+
     _, race_idx = np.unique(key.values, return_inverse=True)
     race_idx_t = torch.tensor(race_idx.astype(np.int64))
 
     # Model
     cat_cards = [art.cat_cardinalities[c] for c in art.categorical_cols if c in art.cat_cardinalities]
-    model = TabularModel(num_in=x_num.shape[1], cat_cardinalities=cat_cards, hidden=[256,128,64], dropout=0.25)
+    model = TabularModel(num_in=x_num.shape[1], cat_cardinalities=cat_cards, hidden=[256, 128, 64], dropout=0.25)
     state = torch.load(model_path, map_location=device)
     model.load_state_dict(state)
     model.to(device)
@@ -867,6 +904,7 @@ def load_model_and_predict(
         "p_place_sigmoid": p_place_sigmoid,
     }
 
+
 # -----------------------------
 # PL helpers (kept)
 # -----------------------------
@@ -875,18 +913,35 @@ def _scores_from_pred_rank(pred_rank: np.ndarray, tau: float = 1.0) -> np.ndarra
     return np.exp(-np.asarray(pred_rank, dtype=float) / float(tau))
 
 def _pl_sample_order(scores: np.ndarray, rng: np.random.Generator) -> np.ndarray:
-    """Sample a finish order from Plackett–Luce given positive scores."""
-    scores = scores.astype(float).copy()
-    n = len(scores)
+    """
+    Sample a full finishing order from Plackett–Luce with scores >= 0.
+    Robust to NaN/inf: cleans, renormalises, and falls back to uniform as needed.
+    """
+    scores = np.asarray(scores, dtype=float)
+    scores[~np.isfinite(scores)] = 0.0
+    n = scores.shape[0]
+    alive = np.arange(n, dtype=int)
     order = np.empty(n, dtype=int)
-    alive = np.arange(n)
-    s = scores.copy()
-    for pos in range(n):
-        p = s / s.sum()
-        i = rng.choice(len(alive), p=p)
-        order[pos] = alive[i]
-        alive = np.delete(alive, i)
-        s = np.delete(s, i)
+
+    k = 0
+    while alive.size > 0:
+        # slice scores for remaining runners, clean + normalise
+        s = scores[alive].astype(float, copy=True)
+        s[~np.isfinite(s)] = 0.0
+        tot = s.sum()
+        if tot <= 0.0:
+            # all zero after cleaning -> uniform choice
+            p = np.full(alive.size, 1.0 / alive.size, dtype=float)
+        else:
+            p = s / tot
+
+        # sample an INDEX into 'alive', not a label
+        idx = rng.choice(alive.size, p=p)
+        pick = alive[idx]
+        order[k] = int(pick)
+        k += 1
+        alive = np.delete(alive, idx)
+
     return order
 
 # -----------------------------

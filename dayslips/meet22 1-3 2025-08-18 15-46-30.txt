@@ -1,0 +1,52 @@
+===========================
+2025-08-18 | Meet 22 Race 1
+===========================
+Top pick: #12 SASKATOON BERRY  |  Model win 11.3%  |  Fair $8.82
+
+Model order:
+ runner_number        runner_name fav_rank win_% $fair_win  new_horse
+            12    SASKATOON BERRY     None  11.3      8.82      False
+            16           ICEWATER     None  10.2      9.79       True
+             2         BUSTERKICK     None   9.4     10.66      False
+             4           HEZANUFF     None   8.6     11.64      False
+             1             BARRON     None   8.4     11.88      False
+             5 PATRIOTICINTENTION     None   7.8     12.77      False
+             8          BOLD ZARA     None   7.8     12.90      False
+             3        DOINGITEASY     None   7.3     13.71      False
+            11       GERRY'S PICK     None   6.9     14.46      False
+             6  RIGHTEOUS BROTHER     None   6.6     15.06      False
+             7          VENDEMMIA     None   6.1     16.40      False
+            14    COME ON GLAMOUR     None   5.0     19.82       True
+            13            SO SAIN     None   4.5     22.34      False
+
+===========================
+2025-08-18 | Meet 22 Race 2
+===========================
+Top pick: #6 SWIPER  |  Model win 18.1%  |  Fair $5.53
+
+Model order:
+ runner_number      runner_name fav_rank win_% $fair_win  new_horse
+             6           SWIPER     None  18.1      5.53      False
+             1     MONTE KAHUNA     None  14.9      6.72      False
+             4  SEASONS OF MIST     None  12.4      8.05      False
+            13     WHATADILEMMA     None  12.3      8.16      False
+            14       QUICK SHOT     None  11.1      9.02      False
+             3 ROCK THE MACHINE     None  10.2      9.83      False
+             2          NAGAMIE     None  10.0     10.00      False
+            16     KALAMIA KING     None   6.6     15.13      False
+            15  WOODLAND WONDER     None   4.5     22.30      False
+
+===========================
+2025-08-18 | Meet 22 Race 3
+===========================
+Top pick: #10 TOTALLY UNDERRATED  |  Model win 17.9%  |  Fair $5.57
+
+Model order:
+ runner_number        runner_name fav_rank win_% $fair_win  new_horse
+            10 TOTALLY UNDERRATED     None  17.9      5.57      False
+             7       BEAUTIFUL JO     None  16.9      5.91       True
+             1             ANDROS     None  15.9      6.30       True
+            12            KIRKALL     None  15.7      6.36       True
+            18              KEMAL     None  14.4      6.95      False
+            16       I'MA CHARMER     None  10.7      9.33      False
+             2       JACOB'S WELL     None   8.4     11.90      False
