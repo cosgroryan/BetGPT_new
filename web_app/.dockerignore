@@ -1,0 +1,103 @@
+# Python cache and compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.venv_mac/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Documentation (keep essential ones, exclude large docs)
+DEPLOYMENT.md
+README.md
+
+# Large data files from parent directories
+../data/
+../artifacts/
+../artifacts_gbm/
+../backups/
+../backtest_logs/
+../dayslips/
+../dumps/
+../example_json/
+../new_app/
+../build/
+../dist/
+
+# Large data files
+*.csv
+*.parquet
+*.pkl
+*.pth
+*.pt
+
+# Log files
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Docker files (don't copy into container)
+Dockerfile*
+docker-compose*
+.dockerignore
+
+# Environment files
+.env
+.env.local
+.env.production
+.env.staging
+
+# Test files
+tests/
+test_*
+*_test.py
+
+# Coverage reports
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+*.ipynb
+
+# Local development
+local/
+dev/
