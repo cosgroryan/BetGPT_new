@@ -18,12 +18,15 @@ import numpy as np
 
 # Add parent directory to path for imports
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+current_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(parent_dir)
+sys.path.append(os.path.join(current_dir, 'scripts', 'web_app_scripts'))
+sys.path.append(os.path.join(current_dir, 'scripts', 'helper_scripts'))
 
 # Change working directory to parent for model files
 os.chdir(parent_dir)
 
-# Import our existing modules
+# Import our existing modules from organized script locations
 from recommend_picks_NN import model_win_table
 from pytorch_pre import load_model_and_predict
 from NEW_racing_GUI import (

@@ -221,9 +221,9 @@ const UI = {
             const modelPred = runner.model_prediction || {};
             const winProb = modelPred.win_percentage || 0;
             const impliedProb = runner.implied_win_prob ? runner.implied_win_prob * 100 : 0;
-            const impliedFormatted = impliedProb > 0 ? Utils.formatPercentage(impliedProb) : '-';
+            const impliedFormatted = impliedProb > 0 ? Utils.formatPercentage(impliedProb, 2) : '-';
             const edge = Utils.calculateEdge(winProb, impliedProb);
-            const edgeFormatted = edge !== null ? Utils.formatPercentage(edge) : '-';
+            const edgeFormatted = edge !== null ? Utils.formatPercentage(edge, 2) : '-';
             const edgeClass = edge > 0 ? 'edge-positive' : 'edge-negative';
             
             // Get gradient classes for percentages
@@ -244,7 +244,7 @@ const UI = {
                     <td>${Utils.formatOdds(runner.odds.place_fixed)}</td>
                     <td>${Utils.formatOdds(runner.odds.place_tote)}</td>
                     <td class="${modelGradientClass}">
-                        <strong>${Utils.formatPercentage(winProb)}</strong>
+                        <strong>${Utils.formatPercentage(winProb, 2)}</strong>
                     </td>
                     <td class="${impliedGradientClass}">
                         <strong>${impliedFormatted}</strong>
