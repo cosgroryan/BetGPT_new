@@ -1,0 +1,48 @@
+===========================
+2025-08-19 Gallops Day Slip
+===========================
+
+Meet 21 | Ballarat Synthetic
+----------------------------
+R1: BACK #5 Lovecats  @ fixed 4.60  blend 22.7%  model 40.3%  market 17.0%  edge 1.0%  kelly 1.2%  stake $3.05
+R2: BACK #3 Planet Mars  @ fixed 15.00  blend 8.2%  model 21.8%  market 5.2%  edge 1.5%  kelly 1.6%  stake $4.11
+R3: BACK #2 Tori's Dee  @ fixed 23.00  blend 6.7%  model 26.8%  market 3.4%  edge 2.3%  kelly 2.4%  stake $6.12
+R4: BACK #7 Riccia  @ fixed 101.00  blend 2.5%  model 30.5%  market 0.8%  edge 1.5%  kelly 1.5%  stake $3.86
+R5: BACK #8 Lady Of Steel  @ fixed 46.00  blend 2.9%  model 10.4%  market 1.7%  edge 0.8%  kelly 0.8%  stake $1.98
+R6: no bet
+R7: BACK #7 Logo Logic  @ fixed 46.00  blend 2.8%  model 8.4%  market 1.7%  edge 0.6%  kelly 0.6%  stake $1.48
+R8: no bet
+
+Meet 22 | Scone
+---------------
+R1: BACK #7 Flying Molly  @ fixed 34.00  blend 4.4%  model 18.4%  market 2.3%  edge 1.5%  kelly 1.5%  stake $3.83
+R2: BACK #1 Caring Lass  @ fixed 14.00  blend 9.3%  model 27.5%  market 5.6%  edge 2.2%  kelly 2.4%  stake $5.89
+R3: BACK #3 Gold Capital  @ fixed 23.00  blend 5.3%  model 14.2%  market 3.4%  edge 1.0%  kelly 1.0%  stake $2.49
+R4: BACK #12 Indian Thunder  @ fixed 126.00  blend 1.8%  model 18.9%  market 0.6%  edge 1.0%  kelly 1.0%  stake $2.51
+R5: BACK #13 Camilla  @ fixed 11.00  blend 10.7%  model 26.3%  market 6.9%  edge 1.6%  kelly 1.7%  stake $4.33
+R6: BACK #7 The Manager  @ fixed 14.00  blend 7.8%  model 16.6%  market 5.5%  edge 0.7%  kelly 0.7%  stake $1.78
+R7: BACK #3 Miss Couver  @ fixed 17.00  blend 7.4%  model 21.6%  market 4.5%  edge 1.5%  kelly 1.6%  stake $4.11
+
+Meet 23 | Dalby
+---------------
+R1: BACK #6 Our Miracle Girl  @ fixed 8.50  blend 14.9%  model 38.4%  market 9.3%  edge 3.2%  kelly 3.6%  stake $9.02
+R2: BACK #5 Lady Encrypteau  @ fixed 27.00  blend 6.3%  model 30.7%  market 2.9%  edge 2.6%  kelly 2.7%  stake $6.64
+R3: BACK #7 Overdoit  @ fixed 27.00  blend 5.0%  model 16.9%  market 2.9%  edge 1.3%  kelly 1.3%  stake $3.34
+R4: BACK #7 Helikedempretty  @ fixed 23.00  blend 8.6%  model 48.2%  market 3.4%  edge 4.3%  kelly 4.5%  stake $11.16
+R5: BACK #6 Nythe  @ fixed 31.00  blend 3.9%  model 10.5%  market 2.5%  edge 0.7%  kelly 0.7%  stake $1.74
+R6: BACK #3 Future Hero  @ fixed 13.00  blend 9.1%  model 22.8%  market 6.0%  edge 1.4%  kelly 1.6%  stake $3.91
+R7: BACK #13 By By Music  @ fixed 23.00  blend 5.9%  model 20.0%  market 3.4%  edge 1.6%  kelly 1.6%  stake $4.09
+R8: BACK #11 Peach Galantes  @ fixed 20.00  blend 6.5%  model 20.1%  market 3.9%  edge 1.5%  kelly 1.6%  stake $4.00
+R9: no bet
+
+Meet 25 | Albury
+----------------
+R1: BACK #7 Lull Us Away  @ fixed 46.00  blend 3.3%  model 14.2%  market 1.7%  edge 1.1%  kelly 1.1%  stake $2.82
+R2: BACK #4 Kooba Lad  @ fixed 34.00  blend 3.8%  model 11.4%  market 2.3%  edge 0.8%  kelly 0.8%  stake $2.11
+R3: BACK #2 Doubtfree  @ fixed 11.00  blend 9.9%  model 20.2%  market 7.1%  edge 0.8%  kelly 0.9%  stake $2.13
+R4: no bet
+R5: BACK #1 I Am Mamwaazel  @ fixed 34.00  blend 4.4%  model 17.9%  market 2.3%  edge 1.4%  kelly 1.5%  stake $3.69
+R6: BACK #13 Flying D'amore  @ fixed 31.00  blend 5.1%  model 23.6%  market 2.5%  edge 1.9%  kelly 2.0%  stake $4.90
+R7: no bet
+
+Total picks: 26

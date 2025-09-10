@@ -1,0 +1,819 @@
+
+== Palmerston North (meet 3) ==
+
+Race 1
+  no bet
+Race 2
+  no bet
+Race 3
+  PLACE $16.42 on #3 #3 @ tote 1.6  blend 87.1%  edge 24.6%  kelly 65.7%
+Race 4
+  PLACE $17.06 on #2 #2 @ tote 2.7  blend 80.0%  edge 43.0%  kelly 68.2%
+Race 5
+  PLACE $16.79 on #2 #2 @ tote 1.7  blend 86.5%  edge 27.7%  kelly 67.2%
+Race 6
+  PLACE $16.92 on #7 #7 @ tote 1.8  blend 85.6%  edge 30.1%  kelly 67.7%
+Race 7
+  PLACE $15.17 on #2 #2 @ tote 1.4  blend 88.8%  edge 17.3%  kelly 60.7%
+Race 8
+  PLACE $16.50 on #2 #2 @ tote 1.6  blend 87.3%  edge 24.8%  kelly 66.0%
+Race 9
+  PLACE $16.10 on #4 #4 @ tote 4.3  blend 72.7%  edge 49.4%  kelly 64.4%
+Race 10
+  PLACE $15.31 on #7 #7 @ tote 5.4  blend 68.4%  edge 49.9%  kelly 61.2%
+Race 11
+  PLACE $17.04 on #2 #2 @ tote 1.8  blend 85.9%  edge 30.3%  kelly 68.2%
+Race 12
+  PLACE $16.84 on #7 #7 @ tote 3.2  blend 77.5%  edge 46.3%  kelly 67.3%
+
+== Ballarat Synthetic (meet 21) ==
+
+Race 1
+  PLACE $16.58 on #2 #2 @ tote 1.6  blend 87.4%  edge 24.9%  kelly 66.3%
+Race 2
+  PLACE $3.67 on #2 #2 @ tote 1.2  blend 85.8%  edge 2.4%  kelly 14.7%
+Race 3
+  PLACE $15.19 on #4 #4 @ tote 1.4  blend 88.8%  edge 17.4%  kelly 60.8%
+Race 4
+  PLACE $16.13 on #5 #5 @ tote 1.7  blend 85.4%  edge 26.6%  kelly 64.5%
+Race 5
+  PLACE $12.24 on #9 #9 @ tote 1.5  blend 83.0%  edge 16.3%  kelly 49.0%
+Race 6
+  PLACE $13.85 on #4 #4 @ tote 1.3  blend 89.7%  edge 12.8%  kelly 55.4%
+Race 7
+  PLACE $13.96 on #1 #1 @ tote 1.8  blend 80.4%  edge 24.8%  kelly 55.8%
+Race 8
+  PLACE $14.25 on #3 #3 @ tote 1.9  blend 79.6%  edge 27.0%  kelly 57.0%
+
+== Scone (meet 22) ==
+
+Race 1
+  PLACE $12.14 on #1 #1 @ tote 1.5  blend 82.9%  edge 16.2%  kelly 48.6%
+Race 2
+  PLACE $16.71 on #6 #6 @ tote 2.1  blend 82.6%  edge 35.0%  kelly 66.8%
+Race 3
+  PLACE $12.20 on #11 #11 @ tote 1.5  blend 82.9%  edge 16.3%  kelly 48.8%
+Race 4
+  PLACE $13.51 on #7 #7 @ tote 1.7  blend 81.1%  edge 22.3%  kelly 54.0%
+Race 5
+  PLACE $14.26 on #7 #7 @ tote 1.9  blend 79.7%  edge 27.0%  kelly 57.0%
+Race 6
+  PLACE $14.09 on #2 #2 @ tote 3.8  blend 67.8%  edge 41.5%  kelly 56.4%
+Race 7
+  PLACE $10.87 on #2 #2 @ tote 1.4  blend 83.8%  edge 12.4%  kelly 43.5%
+
+== Dalby (meet 23) ==
+
+Race 1
+  PLACE $13.85 on #2 #2 @ tote 1.3  blend 89.7%  edge 12.8%  kelly 55.4%
+Race 2
+  PLACE $20.33 on #6 #6 @ tote 7.1  blend 84.0%  edge 69.9%  kelly 81.3%
+Race 3
+  PLACE $8.57 on #2 #2 @ tote 1.3  blend 84.8%  edge 7.9%  kelly 34.3%
+Race 4
+  PLACE $12.72 on #1 #1 @ tote 5.8  blend 59.3%  edge 42.1%  kelly 50.9%
+Race 5
+  PLACE $13.95 on #5 #5 @ tote 1.8  blend 80.4%  edge 24.8%  kelly 55.8%
+Race 6
+  PLACE $14.64 on #7 #7 @ tote 2.3  blend 76.6%  edge 33.1%  kelly 58.6%
+Race 7
+  PLACE $14.51 on #1 #1 @ tote 2.2  blend 77.1%  edge 31.7%  kelly 58.0%
+Race 8
+  PLACE $14.00 on #1 #1 @ tote 3.9  blend 67.3%  edge 41.6%  kelly 56.0%
+Race 9
+  PLACE $12.21 on #8 #8 @ tote 6.7  blend 56.5%  edge 41.6%  kelly 48.9%
+
+== Albury (meet 25) ==
+
+Race 1
+  PLACE $14.42 on #1 #1 @ tote 2.1  blend 77.8%  edge 30.2%  kelly 57.7%
+Race 2
+  PLACE $10.30 on #1 #1 @ tote 1.2  blend 90.2%  edge 6.9%  kelly 41.2%
+Race 3
+  PLACE $10.84 on #10 #10 @ tote 1.4  blend 83.8%  edge 12.4%  kelly 43.4%
+Race 4
+  PLACE $8.60 on #7 #7 @ tote 1.3  blend 84.9%  edge 7.9%  kelly 34.4%
+Race 5
+  PLACE $14.66 on #5 #5 @ tote 2.3  blend 76.6%  edge 33.2%  kelly 58.7%
+Race 6
+  PLACE $14.38 on #5 #5 @ tote 3.2  blend 70.8%  edge 39.5%  kelly 57.5%
+Race 7
+  PLACE $11.49 on #4 #4 @ tote 8.1  blend 52.6%  edge 40.3%  kelly 46.0%
+
+== Newcastle (meet 30) ==
+
+Race 1
+  PLACE $18.61 on #2 #2 @ tote 9.6  blend 77.1%  edge 66.7%  kelly 74.4%
+Race 2
+  PLACE $16.47 on #10 #10 @ tote 1.8  blend 84.8%  edge 29.3%  kelly 65.9%
+Race 3
+  PLACE $14.48 on #6 #6 @ tote 3.0  blend 72.0%  edge 38.6%  kelly 57.9%
+Race 4
+  PLACE $14.59 on #1 #1 @ tote 2.8  blend 73.2%  edge 37.5%  kelly 58.3%
+Race 5
+  PLACE $20.16 on #4 #4 @ tote 2.0  blend 90.3%  edge 40.3%  kelly 80.6%
+Race 6
+  PLACE $14.44 on #1 #1 @ tote 2.8  blend 72.8%  edge 37.1%  kelly 57.8%
+Race 7
+  PLACE $14.36 on #1 #1 @ tote 1.3  blend 90.2%  edge 13.3%  kelly 57.4%
+
+== Albion Park (meet 31) ==
+
+Race 1
+  PLACE $19.50 on #1 #1 @ tote 5.3  blend 82.1%  edge 63.3%  kelly 78.0%
+Race 2
+  PLACE $19.16 on #3 #3 @ tote 2.0  blend 88.3%  edge 38.3%  kelly 76.7%
+Race 3
+  PLACE $18.20 on #1 #1 @ tote 2.2  blend 85.2%  edge 39.7%  kelly 72.8%
+Race 4
+  PLACE $17.46 on #9 #9 @ tote 1.5  blend 89.9%  edge 23.3%  kelly 69.8%
+Race 5
+  PLACE $18.24 on #6 #6 @ tote 1.3  blend 93.8%  edge 16.8%  kelly 72.9%
+Race 6
+  PLACE $17.84 on #12 #12 @ tote 1.7  blend 88.2%  edge 29.4%  kelly 71.3%
+Race 7
+  PLACE $13.02 on #3 #3 @ tote 1.3  blend 88.9%  edge 12.0%  kelly 52.1%
+Race 8
+  PLACE $13.23 on #4 #4 @ tote 1.3  blend 89.1%  edge 12.2%  kelly 52.9%
+Race 9
+  PLACE $2.13 on #3 #3 @ tote 1.1  blend 91.7%  edge 0.8%  kelly 8.5%
+Race 10
+  PLACE $17.17 on #1 #1 @ tote 1.7  blend 87.1%  edge 28.3%  kelly 68.7%
+
+== Shepparton (meet 32) ==
+
+Race 1
+  PLACE $15.23 on #1 #1 @ tote 6.6  blend 66.8%  edge 51.7%  kelly 60.9%
+Race 2
+  PLACE $10.95 on #5 #5 @ tote 1.4  blend 83.9%  edge 12.5%  kelly 43.8%
+Race 3
+  PLACE $8.63 on #5 #5 @ tote 1.3  blend 84.9%  edge 8.0%  kelly 34.5%
+Race 4
+  PLACE $13.98 on #7 #7 @ tote 3.7  blend 67.8%  edge 40.8%  kelly 55.9%
+Race 5
+  PLACE $8.54 on #6 #6 @ tote 1.3  blend 84.8%  edge 7.9%  kelly 34.2%
+Race 6
+  PLACE $13.98 on #7 #7 @ tote 1.8  blend 80.4%  edge 24.8%  kelly 55.9%
+Race 7
+  PLACE $16.83 on #6 #6 @ tote 1.8  blend 85.5%  edge 29.9%  kelly 67.3%
+
+== Young (meet 33) ==
+
+Race 1
+  PLACE $16.80 on #2 #2 @ tote 2.5  blend 80.3%  edge 40.3%  kelly 67.2%
+Race 2
+  PLACE $14.95 on #8 #8 @ tote 15.1  blend 62.5%  edge 55.8%  kelly 59.8%
+Race 3
+  PLACE $20.34 on #1 #1 @ tote 2.6  blend 88.5%  edge 50.1%  kelly 81.4%
+Race 4
+  PLACE $17.98 on #5 #5 @ tote 1.8  blend 87.5%  edge 32.0%  kelly 71.9%
+Race 5
+  PLACE $21.82 on #10 #10 @ tote 3.0  blend 91.5%  edge 58.2%  kelly 87.3%
+Race 6
+  PLACE $23.01 on #6 #6 @ tote 3.5  blend 94.3%  edge 65.7%  kelly 92.0%
+Race 7
+  PLACE $25.00 on #9 #9 @ tote 2.9  blend 100.0%  edge 65.5%  kelly 100.0%
+Race 8
+  PLACE $21.45 on #2 #2 @ tote 1.5  blend 95.3%  edge 28.6%  kelly 85.8%
+Race 9
+  PLACE $25.00 on #1 #1 @ tote 2.8  blend 100.0%  edge 64.3%  kelly 100.0%
+
+== Gloucester Park (meet 34) ==
+
+Race 1
+  PLACE $18.34 on #6 #6 @ tote 2.4  blend 84.5%  edge 42.8%  kelly 73.4%
+Race 2
+  PLACE $10.47 on #6 #6 @ tote 1.2  blend 90.3%  edge 7.0%  kelly 41.9%
+Race 3
+  PLACE $16.38 on #12 #12 @ tote 3.6  blend 75.1%  edge 47.3%  kelly 65.5%
+Race 4
+  PLACE $13.68 on #3 #3 @ tote 4.4  blend 65.0%  edge 42.3%  kelly 54.7%
+Race 5
+  PLACE $17.15 on #1 #1 @ tote 2.7  blend 80.2%  edge 43.2%  kelly 68.6%
+Race 6
+  PLACE $17.44 on #1 #1 @ tote 3.7  blend 77.9%  edge 50.9%  kelly 69.8%
+Race 7
+  PLACE $16.65 on #10 #10 @ tote 1.9  blend 84.2%  edge 31.5%  kelly 66.6%
+Race 8
+  PLACE $17.58 on #1 #1 @ tote 1.9  blend 85.9%  edge 33.3%  kelly 70.3%
+
+== Gawler (meet 40) ==
+
+Race 1
+  no bet
+Race 2
+  no bet
+Race 3
+  PLACE $16.53 on #2 #2 @ tote 3.8  blend 75.0%  edge 48.7%  kelly 66.1%
+Race 4
+  PLACE $23.24 on #4 #4 @ tote 1.5  blend 97.6%  edge 31.0%  kelly 92.9%
+Race 5
+  PLACE $23.09 on #5 #5 @ tote 1.5  blend 97.4%  edge 30.8%  kelly 92.3%
+Race 6
+  PLACE $19.49 on #5 #5 @ tote 1.1  blend 98.0%  edge 7.1%  kelly 78.0%
+Race 7
+  PLACE $25.00 on #7 #7 @ tote 2.1  blend 100.0%  edge 52.4%  kelly 100.0%
+Race 8
+  PLACE $19.85 on #5 #5 @ tote 2.7  blend 87.0%  edge 50.0%  kelly 79.4%
+Race 9
+  PLACE $21.70 on #2 #2 @ tote 3.6  blend 90.5%  edge 62.7%  kelly 86.8%
+
+== Launceston (meet 41) ==
+
+Race 1
+  PLACE $20.93 on #2 #2 @ tote 2.3  blend 90.8%  edge 47.3%  kelly 83.7%
+Race 2
+  PLACE $17.58 on #8 #8 @ tote 2.0  blend 85.2%  edge 35.2%  kelly 70.3%
+Race 3
+  PLACE $14.65 on #1 #1 @ tote 2.6  blend 74.5%  edge 36.1%  kelly 58.6%
+Race 4
+  PLACE $14.53 on #7 #7 @ tote 2.2  blend 77.2%  edge 31.7%  kelly 58.1%
+Race 5
+  PLACE $17.21 on #1 #1 @ tote 1.9  blend 85.2%  edge 32.6%  kelly 68.8%
+Race 6
+  PLACE $13.21 on #7 #7 @ tote 1.2  blend 92.1%  edge 8.8%  kelly 52.9%
+Race 7
+  PLACE $16.02 on #4 #4 @ tote 1.5  blend 88.0%  edge 21.4%  kelly 64.1%
+Race 8
+  PLACE $21.32 on #2 #2 @ tote 1.3  blend 96.6%  edge 19.7%  kelly 85.3%
+Race 9
+  PLACE $22.20 on #2 #2 @ tote 3.0  blend 92.5%  edge 59.2%  kelly 88.8%
+Race 10
+  PLACE $2.14 on #1 #1 @ tote 1.1  blend 91.7%  edge 0.8%  kelly 8.5%
+
+== Geelong (meet 42) ==
+
+Race 1
+  PLACE $10.93 on #6 #6 @ tote 19.1  blend 46.7%  edge 41.4%  kelly 43.7%
+Race 2
+  PLACE $18.13 on #4 #4 @ tote 2.6  blend 83.1%  edge 44.6%  kelly 72.5%
+Race 3
+  PLACE $17.02 on #2 #2 @ tote 1.8  blend 85.8%  edge 30.3%  kelly 68.1%
+Race 4
+  no bet
+Race 5
+  PLACE $3.77 on #2 #2 @ tote 1.2  blend 85.8%  edge 2.5%  kelly 15.1%
+Race 6
+  PLACE $16.39 on #7 #7 @ tote 4.0  blend 74.2%  edge 49.2%  kelly 65.6%
+Race 7
+  PLACE $20.88 on #2 #2 @ tote 3.0  blend 89.0%  edge 55.7%  kelly 83.5%
+Race 8
+  PLACE $11.03 on #1 #1 @ tote 1.2  blend 90.7%  edge 7.4%  kelly 44.1%
+Race 9
+  PLACE $13.75 on #2 #2 @ tote 1.3  blend 89.6%  edge 12.7%  kelly 55.0%
+Race 10
+  PLACE $25.00 on #4 #4 @ tote 3.0  blend 100.0%  edge 66.7%  kelly 100.0%
+Race 11
+  PLACE $20.46 on #2 #2 @ tote 2.2  blend 90.1%  edge 44.6%  kelly 81.9%
+Race 12
+  PLACE $22.20 on #1 #1 @ tote 8.5  blend 90.1%  edge 78.3%  kelly 88.8%
+Race 13
+  PLACE $12.69 on #4 #4 @ tote 1.3  blend 88.6%  edge 11.7%  kelly 50.8%
+
+== Casino (meet 43) ==
+
+Race 1
+  no bet
+Race 2
+  PLACE $25.00 on #5 #5 @ tote 1.6  blend 100.0%  edge 37.5%  kelly 100.0%
+Race 3
+  PLACE $22.72 on #4 #4 @ tote 3.0  blend 93.9%  edge 60.6%  kelly 90.9%
+Race 4
+  PLACE $10.15 on #2 #2 @ tote 1.2  blend 90.1%  edge 6.8%  kelly 40.6%
+Race 5
+  PLACE $2.93 on #4 #4 @ tote 1.1  blend 92.0%  edge 1.1%  kelly 11.7%
+Race 6
+  no bet
+Race 7
+  PLACE $25.00 on #4 #4 @ tote 1.4  blend 100.0%  edge 28.6%  kelly 100.0%
+Race 8
+  PLACE $21.40 on #7 #7 @ tote 1.7  blend 94.1%  edge 35.2%  kelly 85.6%
+Race 9
+  no bet
+Race 10
+  no bet
+Race 11
+  no bet
+
+== Horsham (meet 44) ==
+
+Race 1
+  PLACE $16.91 on #3 #3 @ tote 3.3  blend 77.4%  edge 47.1%  kelly 67.6%
+Race 2
+  PLACE $19.42 on #1 #1 @ tote 4.4  blend 82.8%  edge 60.0%  kelly 77.7%
+Race 3
+  PLACE $14.43 on #1 #1 @ tote 1.3  blend 90.2%  edge 13.3%  kelly 57.7%
+Race 4
+  PLACE $25.00 on #7 #7 @ tote 6.2  blend 100.0%  edge 83.9%  kelly 100.0%
+Race 5
+  PLACE $12.79 on #6 #6 @ tote 1.2  blend 91.9%  edge 8.5%  kelly 51.1%
+Race 6
+  PLACE $20.00 on #6 #6 @ tote 1.8  blend 91.1%  edge 35.6%  kelly 80.0%
+Race 7
+  PLACE $22.34 on #1 #1 @ tote 2.3  blend 94.0%  edge 50.5%  kelly 89.4%
+Race 8
+  PLACE $22.12 on #1 #1 @ tote 1.3  blend 97.3%  edge 20.4%  kelly 88.5%
+Race 9
+  PLACE $25.00 on #3 #3 @ tote 2.5  blend 100.0%  edge 60.0%  kelly 100.0%
+Race 10
+  PLACE $23.72 on #5 #5 @ tote 2.0  blend 97.4%  edge 47.4%  kelly 94.9%
+Race 11
+  PLACE $25.00 on #3 #3 @ tote 2.4  blend 100.0%  edge 58.3%  kelly 100.0%
+Race 12
+  PLACE $25.00 on #6 #6 @ tote 2.1  blend 100.0%  edge 52.4%  kelly 100.0%
+
+== Q1 Lakeside (meet 45) ==
+
+Race 1
+  PLACE $16.79 on #1 #1 @ tote 1.1  blend 97.0%  edge 6.1%  kelly 67.2%
+Race 2
+  PLACE $25.00 on #6 #6 @ tote 9.8  blend 100.0%  edge 89.8%  kelly 100.0%
+Race 3
+  PLACE $23.15 on #4 #4 @ tote 5.1  blend 94.1%  edge 74.5%  kelly 92.6%
+Race 4
+  no bet
+Race 5
+  no bet
+Race 6
+  PLACE $16.04 on #2 #2 @ tote 9.0  blend 68.1%  edge 57.0%  kelly 64.1%
+Race 7
+  PLACE $21.40 on #1 #1 @ tote 1.7  blend 94.1%  edge 35.2%  kelly 85.6%
+Race 8
+  no bet
+Race 9
+  PLACE $25.00 on #8 #8 @ tote 3.1  blend 100.0%  edge 67.7%  kelly 100.0%
+Race 10
+  no bet
+Race 11
+  PLACE $22.14 on #3 #3 @ tote 6.3  blend 90.4%  edge 74.5%  kelly 88.5%
+Race 12
+  PLACE $22.88 on #5 #5 @ tote 3.9  blend 93.7%  edge 68.1%  kelly 91.5%
+
+== Angle Park (meet 46) ==
+
+Race 1
+  no bet
+Race 2
+  PLACE $16.99 on #1 #1 @ tote 1.7  blend 86.8%  edge 28.0%  kelly 68.0%
+Race 3
+  PLACE $10.15 on #4 #4 @ tote 1.2  blend 90.1%  edge 6.8%  kelly 40.6%
+Race 4
+  no bet
+Race 5
+  PLACE $23.37 on #7 #7 @ tote 11.5  blend 94.1%  edge 85.4%  kelly 93.5%
+Race 6
+  PLACE $20.28 on #2 #2 @ tote 2.1  blend 90.1%  edge 42.5%  kelly 81.1%
+Race 7
+  no bet
+Race 8
+  no bet
+Race 9
+  no bet
+Race 10
+  no bet
+
+== Warragul (meet 47) ==
+
+Race 1
+  PLACE $22.38 on #5 #5 @ tote 1.4  blend 97.0%  edge 25.6%  kelly 89.5%
+Race 2
+  PLACE $16.10 on #2 #2 @ tote 1.2  blend 94.1%  edge 10.7%  kelly 64.4%
+Race 3
+  PLACE $13.75 on #1 #1 @ tote 1.3  blend 89.6%  edge 12.7%  kelly 55.0%
+Race 4
+  PLACE $20.05 on #8 #8 @ tote 3.0  blend 86.8%  edge 53.5%  kelly 80.2%
+Race 5
+  PLACE $17.05 on #5 #5 @ tote 3.2  blend 78.1%  edge 46.9%  kelly 68.2%
+Race 6
+  PLACE $17.03 on #1 #1 @ tote 5.8  blend 73.6%  edge 56.4%  kelly 68.1%
+Race 7
+  PLACE $11.67 on #4 #4 @ tote 12.8  blend 50.8%  edge 43.0%  kelly 46.7%
+Race 8
+  PLACE $16.79 on #1 #1 @ tote 28.3  blend 68.3%  edge 64.8%  kelly 67.2%
+Race 9
+  PLACE $21.36 on #1 #1 @ tote 1.7  blend 94.0%  edge 35.2%  kelly 85.4%
+Race 10
+  PLACE $19.96 on #9 #9 @ tote 1.4  blend 94.2%  edge 22.8%  kelly 79.9%
+Race 11
+  PLACE $21.29 on #4 #4 @ tote 3.0  blend 90.1%  edge 56.8%  kelly 85.2%
+Race 12
+  PLACE $14.37 on #2 #2 @ tote 13.1  blend 60.7%  edge 53.1%  kelly 57.5%
+
+== Bulli (meet 48) ==
+
+Race 1
+  PLACE $25.00 on #4 #4 @ tote 1.2  blend 100.0%  edge 16.7%  kelly 100.0%
+Race 2
+  no bet
+Race 3
+  no bet
+Race 4
+  no bet
+Race 5
+  no bet
+Race 6
+  no bet
+Race 7
+  no bet
+Race 8
+  no bet
+Race 9
+  PLACE $16.99 on #2 #2 @ tote 1.7  blend 86.8%  edge 28.0%  kelly 68.0%
+Race 10
+  no bet
+Race 11
+  no bet
+Race 12
+  no bet
+
+== Townsville (meet 49) ==
+
+Race 1
+  no bet
+Race 2
+  no bet
+Race 3
+  no bet
+Race 4
+  no bet
+Race 5
+  no bet
+Race 6
+  no bet
+Race 7
+  no bet
+Race 8
+  no bet
+Race 9
+  no bet
+Race 10
+  no bet
+Race 11
+  no bet
+Race 12
+  no bet
+
+== Gosford (meet 50) ==
+
+Race 1
+  PLACE $20.88 on #1 #1 @ tote 2.5  blend 90.1%  edge 50.1%  kelly 83.5%
+Race 2
+  PLACE $10.15 on #1 #1 @ tote 1.2  blend 90.1%  edge 6.8%  kelly 40.6%
+Race 3
+  PLACE $25.00 on #9 #9 @ tote 1.1  blend 100.0%  edge 9.1%  kelly 100.0%
+Race 4
+  PLACE $25.00 on #7 #7 @ tote 1.2  blend 100.0%  edge 16.7%  kelly 100.0%
+Race 5
+  PLACE $25.00 on #9 #9 @ tote 1.1  blend 100.0%  edge 9.1%  kelly 100.0%
+Race 6
+  PLACE $18.40 on #1 #1 @ tote 1.6  blend 90.1%  edge 27.6%  kelly 73.6%
+Race 7
+  no bet
+Race 8
+  PLACE $25.00 on #5 #5 @ tote 1.1  blend 100.0%  edge 9.1%  kelly 100.0%
+Race 9
+  no bet
+Race 10
+  no bet
+Race 11
+  PLACE $19.81 on #1 #1 @ tote 1.4  blend 94.1%  edge 22.6%  kelly 79.2%
+Race 12
+  PLACE $25.00 on #2 #2 @ tote 4.0  blend 100.0%  edge 75.0%  kelly 100.0%
+
+== Kenilworth (meet 51) ==
+
+Race 1
+  PLACE $25.00 on #8 #8 @ tote 1.8  blend 100.0%  edge 44.4%  kelly 100.0%
+Race 2
+  no bet
+Race 3
+  no bet
+Race 4
+  no bet
+Race 5
+  no bet
+Race 6
+  no bet
+Race 7
+  no bet
+Race 8
+  no bet
+
+== Urawa (meet 52) ==
+
+Race 1
+  PLACE $14.03 on #5 #5 @ tote 2.2  blend 76.1%  edge 30.6%  kelly 56.1%
+Race 2
+  PLACE $18.15 on #4 #4 @ tote 2.5  blend 83.6%  edge 43.6%  kelly 72.6%
+Race 3
+  no bet
+Race 4
+  PLACE $16.14 on #3 #3 @ tote 2.0  blend 82.3%  edge 32.3%  kelly 64.6%
+Race 5
+  PLACE $19.96 on #11 #11 @ tote 1.9  blend 90.4%  edge 37.8%  kelly 79.8%
+Race 6
+  PLACE $17.36 on #1 #1 @ tote 12.7  blend 71.9%  edge 64.0%  kelly 69.5%
+Race 7
+  PLACE $20.28 on #5 #5 @ tote 2.1  blend 90.1%  edge 42.5%  kelly 81.1%
+Race 8
+  PLACE $21.07 on #2 #2 @ tote 3.8  blend 88.4%  edge 62.1%  kelly 84.3%
+Race 9
+  PLACE $17.23 on #1 #1 @ tote 2.1  blend 83.7%  edge 36.1%  kelly 68.9%
+Race 10
+  PLACE $18.57 on #8 #8 @ tote 1.3  blend 94.1%  edge 17.1%  kelly 74.3%
+Race 11
+  PLACE $25.00 on #7 #7 @ tote 2.0  blend 100.0%  edge 50.0%  kelly 100.0%
+Race 12
+  PLACE $19.66 on #1 #1 @ tote 8.1  blend 81.3%  edge 68.9%  kelly 78.6%
+
+== Mandurah (meet 53) ==
+
+Race 1
+  no bet
+Race 2
+  PLACE $25.00 on #6 #6 @ tote 1.8  blend 100.0%  edge 44.4%  kelly 100.0%
+Race 3
+  no bet
+Race 4
+  no bet
+Race 5
+  PLACE $17.03 on #3 #3 @ tote 5.7  blend 73.7%  edge 56.2%  kelly 68.1%
+Race 6
+  no bet
+Race 7
+  no bet
+Race 8
+  no bet
+Race 9
+  no bet
+Race 10
+  no bet
+Race 11
+  no bet
+
+== Divonne (meet 54) ==
+
+Race 1
+  no bet
+Race 2
+  no bet
+Race 3
+  no bet
+Race 4
+  no bet
+Race 5
+  no bet
+Race 6
+  no bet
+Race 7
+  no bet
+Race 8
+  no bet
+
+== Deauville (meet 55) ==
+
+Race 1
+  PLACE $14.22 on #1 #1 @ tote 3.3  blend 69.9%  edge 39.6%  kelly 56.9%
+Race 2
+  PLACE $13.59 on #1 #1 @ tote 4.5  blend 64.5%  edge 42.3%  kelly 54.3%
+Race 3
+  no bet
+Race 4
+  no bet
+Race 5
+  no bet
+Race 6
+  no bet
+Race 7
+  no bet
+Race 8
+  no bet
+Race 9
+  no bet
+
+== Horseshoe Indianapolis (meet 60) ==
+
+Race 1
+  no bet
+Race 2
+  no bet
+Race 3
+  no bet
+Race 4
+  PLACE $19.98 on #4 #4 @ tote 5.0  blend 83.9%  edge 63.9%  kelly 79.9%
+Race 5
+  PLACE $18.14 on #2 #2 @ tote 4.2  blend 79.1%  edge 55.3%  kelly 72.5%
+Race 6
+  PLACE $14.56 on #2 #2 @ tote 2.5  blend 74.9%  edge 34.9%  kelly 58.2%
+Race 7
+  PLACE $13.22 on #1 #1 @ tote 4.9  blend 62.5%  edge 42.1%  kelly 52.9%
+Race 8
+  PLACE $18.89 on #1 #1 @ tote 3.1  blend 83.5%  edge 51.2%  kelly 75.6%
+Race 9
+  PLACE $9.79 on #2 #2 @ tote 20.0  blend 42.2%  edge 37.2%  kelly 39.2%
+
+== Ellis Park (meet 61) ==
+
+Race 1
+  no bet
+Race 2
+  no bet
+Race 3
+  no bet
+Race 4
+  no bet
+Race 5
+  no bet
+Race 6
+  no bet
+Race 7
+  no bet
+Race 8
+  PLACE $25.00 on #2 #2 @ tote 9.3  blend 100.0%  edge 89.2%  kelly 100.0%
+Race 9
+  PLACE $20.88 on #4 #4 @ tote 2.5  blend 90.1%  edge 50.1%  kelly 83.5%
+
+== Thistledown (meet 62) ==
+
+Race 1
+  no bet
+Race 2
+  no bet
+Race 3
+  no bet
+Race 4
+  no bet
+Race 5
+  no bet
+Race 6
+  no bet
+Race 7
+  no bet
+Race 8
+  PLACE $17.34 on #7 #7 @ tote 2.1  blend 83.9%  edge 36.3%  kelly 69.3%
+
+== Finger Lakes (meet 63) ==
+
+Race 1
+  no bet
+Race 2
+  no bet
+Race 3
+  no bet
+Race 4
+  no bet
+Race 5
+  no bet
+Race 6
+  PLACE $21.57 on #5 #5 @ tote 3.6  blend 90.1%  edge 62.3%  kelly 86.3%
+Race 7
+  PLACE $25.00 on #3 #3 @ tote 1.6  blend 100.0%  edge 37.5%  kelly 100.0%
+Race 8
+  PLACE $17.27 on #1 #1 @ tote 2.5  blend 81.5%  edge 41.5%  kelly 69.1%
+
+== Presque Isle Downs (meet 64) ==
+
+Race 1
+  no bet
+Race 2
+  PLACE $16.21 on #1 #1 @ tote 1.6  blend 86.8%  edge 24.3%  kelly 64.8%
+Race 3
+  PLACE $10.15 on #2 #2 @ tote 1.2  blend 90.1%  edge 6.8%  kelly 40.6%
+Race 4
+  PLACE $10.37 on #1 #1 @ tote 1.2  blend 90.2%  edge 6.9%  kelly 41.5%
+Race 5
+  PLACE $17.29 on #4 #4 @ tote 1.6  blend 88.4%  edge 25.9%  kelly 69.2%
+Race 6
+  PLACE $19.76 on #2 #2 @ tote 2.7  blend 86.8%  edge 49.8%  kelly 79.0%
+Race 7
+  PLACE $10.77 on #12 #12 @ tote 1.4  blend 83.7%  edge 12.3%  kelly 43.1%
+Race 8
+  PLACE $17.00 on #3 #3 @ tote 2.8  blend 79.4%  edge 43.7%  kelly 68.0%
+
+== Fort Erie (meet 65) ==
+
+Race 1
+  no bet
+Race 2
+  PLACE $17.16 on #5 #5 @ tote 2.6  blend 80.7%  edge 42.2%  kelly 68.6%
+Race 3
+  PLACE $17.40 on #1 #1 @ tote 3.3  blend 78.8%  edge 48.5%  kelly 69.6%
+Race 4
+  PLACE $15.32 on #6 #6 @ tote 1.4  blend 88.9%  edge 17.5%  kelly 61.3%
+Race 5
+  PLACE $12.93 on #2 #2 @ tote 1.6  blend 81.9%  edge 19.4%  kelly 51.7%
+Race 6
+  PLACE $17.95 on #7 #7 @ tote 2.4  blend 83.5%  edge 41.9%  kelly 71.8%
+
+== Gavea (meet 66) ==
+
+Race 1
+  PLACE $21.45 on #6 #6 @ tote 7.3  blend 87.7%  edge 74.0%  kelly 85.8%
+Race 2
+  PLACE $21.04 on #3 #3 @ tote 1.6  blend 94.1%  edge 31.6%  kelly 84.2%
+Race 3
+  PLACE $8.23 on #2 #2 @ tote 1.3  blend 84.5%  edge 7.6%  kelly 32.9%
+Race 4
+  PLACE $16.22 on #4 #4 @ tote 1.6  blend 86.8%  edge 24.3%  kelly 64.9%
+Race 5
+  PLACE $13.45 on #1 #1 @ tote 1.7  blend 81.0%  edge 22.2%  kelly 53.8%
+Race 6
+  PLACE $12.24 on #1 #1 @ tote 1.5  blend 83.0%  edge 16.3%  kelly 49.0%
+Race 7
+  PLACE $4.90 on #3 #3 @ tote 1.2  blend 86.6%  edge 3.3%  kelly 19.6%
+Race 8
+  PLACE $16.69 on #8 #8 @ tote 2.4  blend 80.6%  edge 38.9%  kelly 66.7%
+Race 9
+  PLACE $14.52 on #3 #3 @ tote 2.3  blend 76.3%  edge 32.8%  kelly 58.1%
+
+== Mountaineer Park (meet 67) ==
+
+Race 1
+  PLACE $10.85 on #8 #8 @ tote 1.4  blend 83.8%  edge 12.4%  kelly 43.4%
+Race 2
+  PLACE $14.48 on #7 #7 @ tote 1.4  blend 88.0%  edge 16.5%  kelly 57.9%
+Race 3
+  PLACE $15.61 on #1 #1 @ tote 4.9  blend 70.1%  edge 49.7%  kelly 62.4%
+Race 4
+  PLACE $11.99 on #7 #7 @ tote 1.5  blend 82.7%  edge 16.0%  kelly 48.0%
+Race 5
+  PLACE $20.93 on #3 #3 @ tote 3.5  blend 88.4%  edge 59.8%  kelly 83.7%
+Race 6
+  PLACE $16.55 on #3 #3 @ tote 2.3  blend 80.9%  edge 37.4%  kelly 66.2%
+Race 7
+  PLACE $17.02 on #9 #9 @ tote 1.8  blend 85.8%  edge 30.3%  kelly 68.1%
+Race 8
+  PLACE $14.10 on #2 #2 @ tote 1.9  blend 79.3%  edge 26.7%  kelly 56.4%
+
+== Yonkers Raceway (meet 68) ==
+
+Race 1
+  PLACE $12.44 on #5 #5 @ tote 1.6  blend 81.2%  edge 18.7%  kelly 49.7%
+Race 2
+  PLACE $10.05 on #5 #5 @ tote 1.4  blend 82.9%  edge 11.5%  kelly 40.2%
+Race 3
+  PLACE $20.73 on #4 #4 @ tote 2.5  blend 89.8%  edge 49.8%  kelly 82.9%
+Race 4
+  PLACE $15.45 on #2 #2 @ tote 1.5  blend 87.3%  edge 20.6%  kelly 61.8%
+Race 5
+  PLACE $7.75 on #3 #3 @ tote 1.3  blend 84.1%  edge 7.1%  kelly 31.0%
+Race 6
+  PLACE $13.36 on #3 #3 @ tote 1.4  blend 86.7%  edge 15.3%  kelly 53.4%
+Race 7
+  PLACE $15.15 on #7 #7 @ tote 4.0  blend 70.4%  edge 45.4%  kelly 60.6%
+Race 8
+  PLACE $14.70 on #5 #5 @ tote 1.4  blend 88.2%  edge 16.8%  kelly 58.8%
+Race 9
+  PLACE $11.47 on #4 #4 @ tote 1.5  blend 82.0%  edge 15.3%  kelly 45.9%
+
+== Woodbine Mohawk Park (meet 69) ==
+
+Race 1
+  PLACE $13.28 on #9 #9 @ tote 1.4  blend 86.6%  edge 15.2%  kelly 53.1%
+Race 2
+  PLACE $15.34 on #4 #4 @ tote 1.5  blend 87.1%  edge 20.5%  kelly 61.4%
+Race 3
+  PLACE $16.41 on #1 #1 @ tote 1.7  blend 85.9%  edge 27.0%  kelly 65.6%
+Race 4
+  PLACE $7.67 on #7 #7 @ tote 1.3  blend 84.0%  edge 7.1%  kelly 30.7%
+Race 5
+  PLACE $17.58 on #4 #4 @ tote 2.6  blend 81.7%  edge 43.3%  kelly 70.3%
+Race 6
+  PLACE $10.16 on #4 #4 @ tote 1.4  blend 83.0%  edge 11.6%  kelly 40.6%
+Race 7
+  PLACE $12.38 on #4 #4 @ tote 1.6  blend 81.1%  edge 18.6%  kelly 49.5%
+Race 8
+  PLACE $9.65 on #6 #6 @ tote 1.2  blend 89.8%  edge 6.4%  kelly 38.6%
+Race 9
+  PLACE $16.65 on #1 #1 @ tote 1.8  blend 85.2%  edge 29.6%  kelly 66.6%
+Race 10
+  PLACE $2.49 on #1 #1 @ tote 1.2  blend 85.0%  edge 1.7%  kelly 10.0%
+
+== Northfield Park (meet 70) ==
+
+Race 1
+  PLACE $13.37 on #3 #3 @ tote 1.8  blend 79.3%  edge 23.8%  kelly 53.5%
+Race 2
+  PLACE $16.23 on #5 #5 @ tote 3.6  blend 74.7%  edge 46.9%  kelly 64.9%
+Race 3
+  PLACE $2.30 on #2 #2 @ tote 1.2  blend 84.9%  edge 1.5%  kelly 9.2%
+Race 4
+  PLACE $16.33 on #1 #1 @ tote 2.6  blend 78.7%  edge 40.2%  kelly 65.3%
+Race 5
+  PLACE $12.24 on #7 #7 @ tote 1.6  blend 80.9%  edge 18.4%  kelly 48.9%
+Race 6
+  PLACE $12.99 on #1 #1 @ tote 1.3  blend 88.9%  edge 12.0%  kelly 52.0%
+Race 7
+  PLACE $8.09 on #1 #1 @ tote 1.2  blend 88.7%  edge 5.4%  kelly 32.4%
+Race 8
+  PLACE $15.23 on #1 #1 @ tote 1.6  blend 85.4%  edge 22.9%  kelly 60.9%
+Race 9
+  PLACE $2.28 on #3 #3 @ tote 1.2  blend 84.9%  edge 1.5%  kelly 9.1%
+Race 10
+  PLACE $12.07 on #4 #4 @ tote 1.3  blend 88.1%  edge 11.1%  kelly 48.3%
+Race 11
+  PLACE $10.14 on #5 #5 @ tote 1.4  blend 83.0%  edge 11.6%  kelly 40.6%
+Race 12
+  PLACE $11.78 on #1 #1 @ tote 1.3  blend 87.8%  edge 10.9%  kelly 47.1%
+
+Total picks: 252

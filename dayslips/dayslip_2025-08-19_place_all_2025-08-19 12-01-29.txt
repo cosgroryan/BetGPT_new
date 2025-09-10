@@ -1,0 +1,397 @@
+===========================
+2025-08-19 Gallops Day Slip
+===========================
+Bet type: place
+
+Meet 3 | Palmerston North
+-------------------------
+R1: no bet
+R2: no place market
+R3: no place market
+R4: no place market
+R5: no place market
+R6: no place market
+R7: no place market
+R8: no place market
+R9: no place market
+R10: no place market
+R11: no place market
+R12: no place market
+
+Meet 21 | Ballarat Synthetic
+----------------------------
+R1: no place market
+R2: no place market
+R3: no place market
+R4: no place market
+R5: no place market
+R6: no place market
+R7: no place market
+R8: no place market
+
+Meet 22 | Scone
+---------------
+R1: no place market
+R2: no place market
+R3: no place market
+R4: no place market
+R5: no place market
+R6: no place market
+R7: no place market
+
+Meet 23 | Dalby
+---------------
+R1: no place market
+R2: no place market
+R3: no place market
+R4: no place market
+R5: no place market
+R6: no place market
+R7: no place market
+R8: no place market
+R9: no place market
+
+Meet 25 | Albury
+----------------
+R1: no place market
+R2: no place market
+R3: no place market
+R4: no place market
+R5: no place market
+R6: no place market
+R7: no place market
+
+Meet 30 | Newcastle
+-------------------
+R1: no place market
+R2: no place market
+R3: no place market
+R4: no place market
+R5: no place market
+R6: no place market
+R7: no place market
+
+Meet 31 | Albion Park
+---------------------
+R1: no place market
+R2: no place market
+R3: no place market
+R4: no place market
+R5: no place market
+R6: no place market
+R7: no place market
+R8: no place market
+R9: no place market
+R10: no place market
+
+Meet 32 | Shepparton
+--------------------
+R1: no place market
+R2: no place market
+R3: no place market
+R4: no place market
+R5: no place market
+R6: no place market
+R7: no place market
+
+Meet 33 | Young
+---------------
+R1: no place market
+R2: no place market
+R3: no place market
+R4: no place market
+R5: no place market
+R6: no place market
+R7: no place market
+R8: no place market
+R9: no place market
+
+Meet 34 | Gloucester Park
+-------------------------
+R1: no place market
+R2: no place market
+R3: no place market
+R4: no place market
+R5: no place market
+R6: no place market
+R7: no place market
+R8: no place market
+
+Meet 40 | Gawler
+----------------
+R1: no place market
+R2: no place market
+R3: no place market
+R4: no place market
+R5: no place market
+R6: no place market
+R7: no place market
+R8: no place market
+R9: no place market
+
+Meet 41 | Launceston
+--------------------
+R1: no place market
+R2: no place market
+R3: no place market
+R4: no place market
+R5: no place market
+R6: no place market
+R7: no place market
+R8: no place market
+R9: no place market
+R10: no place market
+
+Meet 45 | Q1 Lakeside
+---------------------
+R1: no place market
+R2: no place market
+R3: no place market
+R4: no place market
+R5: no place market
+R6: no place market
+R7: no place market
+R8: no place market
+R9: no place market
+R10: no place market
+R11: no place market
+R12: no place market
+
+Meet 48 | Bulli
+---------------
+R1: no place market
+R2: no place market
+R3: no place market
+R4: no place market
+R5: no place market
+R6: no place market
+R7: no place market
+R8: no place market
+R9: no place market
+R10: no place market
+R11: no place market
+R12: no place market
+
+Meet 49 | Townsville
+--------------------
+R1: no place market
+R2: no place market
+R3: no place market
+R4: no place market
+R5: no place market
+R6: no place market
+R7: no place market
+R8: no place market
+R9: no place market
+R10: no place market
+R11: no place market
+R12: no place market
+
+Meet 50 | Gosford
+-----------------
+R1: no place market
+R2: no place market
+R3: no place market
+R4: no place market
+R5: no place market
+R6: no place market
+R7: no place market
+R8: no place market
+R9: no place market
+R10: no place market
+R11: no place market
+R12: no place market
+
+Meet 51 | Kenilworth
+--------------------
+R1: no place market
+R2: no place market
+R3: no place market
+R4: no place market
+R5: no place market
+R6: no place market
+R7: no place market
+R8: no place market
+
+Meet 52 | Urawa
+---------------
+R1: no place market
+R2: no place market
+R3: no place market
+R4: no place market
+R5: no place market
+R6: no place market
+R7: no place market
+R8: no place market
+R9: no place market
+R10: no place market
+R11: no place market
+R12: no place market
+
+Meet 53 | Mandurah
+------------------
+R1: no place market
+R2: no place market
+R3: no place market
+R4: no place market
+R5: no place market
+R6: no place market
+R7: no place market
+R8: no place market
+R9: no place market
+R10: no place market
+R11: no place market
+
+Meet 54 | Divonne
+-----------------
+R1: no place market
+R2: no place market
+R3: no place market
+R4: no place market
+R5: no place market
+R6: no place market
+R7: no place market
+R8: no place market
+
+Meet 55 | Deauville
+-------------------
+R1: no place market
+R2: no place market
+R3: no place market
+R4: no place market
+R5: no place market
+R6: no place market
+R7: no place market
+R8: no place market
+R9: no place market
+
+Meet 60 | Horseshoe Indianapolis
+--------------------------------
+R1: no place market
+R2: no place market
+R3: no place market
+R4: no place market
+R5: no place market
+R6: no place market
+R7: no place market
+R8: no place market
+R9: no place market
+
+Meet 61 | Ellis Park
+--------------------
+R1: no place market
+R2: no place market
+R3: no place market
+R4: no place market
+R5: no place market
+R6: no place market
+R7: no place market
+R8: no place market
+R9: no place market
+
+Meet 62 | Thistledown
+---------------------
+R1: no place market
+R2: no place market
+R3: no place market
+R4: no place market
+R5: no place market
+R6: no place market
+R7: no place market
+R8: no place market
+
+Meet 63 | Finger Lakes
+----------------------
+R1: no place market
+R2: no place market
+R3: no place market
+R4: no place market
+R5: no place market
+R6: no place market
+R7: no place market
+R8: no place market
+
+Meet 64 | Presque Isle Downs
+----------------------------
+R1: no place market
+R2: no place market
+R3: no place market
+R4: no place market
+R5: no place market
+R6: no place market
+R7: no place market
+R8: no place market
+
+Meet 65 | Fort Erie
+-------------------
+R1: no place market
+R2: no place market
+R3: no place market
+R4: no place market
+R5: no place market
+R6: no place market
+
+Meet 66 | Gavea
+---------------
+R1: no place market
+R2: no place market
+R3: no place market
+R4: no place market
+R5: no place market
+R6: no place market
+R7: no place market
+R8: no place market
+R9: no place market
+
+Meet 67 | Mountaineer Park
+--------------------------
+R1: no place market
+R2: no place market
+R3: no place market
+R4: no place market
+R5: no place market
+R6: no place market
+R7: no place market
+R8: no place market
+
+Meet 68 | Yonkers Raceway
+-------------------------
+R1: no place market
+R2: no place market
+R3: no place market
+R4: no place market
+R5: no place market
+R6: no place market
+R7: no place market
+R8: no place market
+R9: no place market
+
+Meet 69 | Woodbine Mohawk Park
+------------------------------
+R1: no place market
+R2: no place market
+R3: no place market
+R4: no place market
+R5: no place market
+R6: no place market
+R7: no place market
+R8: no place market
+R9: no place market
+R10: no place market
+
+Meet 70 | Northfield Park
+-------------------------
+R1: no place market
+R2: no place market
+R3: no place market
+R4: no place market
+R5: no place market
+R6: no place market
+R7: no place market
+R8: no place market
+R9: no place market
+R10: no place market
+R11: no place market
+R12: no place market
+
+Total picks: 0

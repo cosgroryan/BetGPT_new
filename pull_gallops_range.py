@@ -1,5 +1,23 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+"""
+Pull gallops schedule + odds (fixed & tote) + results over a date range (inclusive).
+
+Usage:
+  python pull_gallops_range.py --start 2025-08-15 --end 2025-08-19 --outdir data
+
+Writes:
+  data/gallops_2025-08-15_to_2025-08-19.parquet
+
+Notes:
+- Gallops filtering follows TAB NZ semantics observed in schedule payloads:
+  * event_type == 'G'  -> gallops
+  * event_type in {'GR','H'} -> NOT gallops
+  * domain == 'HORSE' -> gallops (extra signal seen in some schedules)
+  Fallback heuristics keep earlier keyword checks for robustness across variants.
+- Odds endpoint is queried for each race and we extract both fixed and tote prices when present.
+- Results endpoint is queried per race; finish map and top-3 are derived when available.
+"""
 
 import argparse
 from datetime import datetime, timedelta, timezone
@@ -15,6 +33,7 @@ from urllib3.util.retry import Retry
 # ---------------- HTTP ----------------
 TIMEOUT = 25
 
+
 def make_session():
     s = requests.Session()
     retry = Retry(
@@ -27,6 +46,7 @@ def make_session():
     s.mount("https://", HTTPAdapter(max_retries=retry))
     return s
 
+
 def get_json(session: requests.Session, url: str) -> Optional[dict]:
     try:
         r = session.get(url, timeout=TIMEOUT)
@@ -35,41 +55,64 @@ def get_json(session: requests.Session, url: str) -> Optional[dict]:
     except Exception:
         return None
 
+
 def safe_int(x):
     try:
         return int(x)
     except Exception:
         return None
 
-# ---------------- Try to reuse your helpers ----------------
+
+# ---------------- Helpers / fallbacks ----------------
 try:
-    # put benchmark_yesterday.py next to this script
-    from benchmark_yesterday import is_gallops_meeting, fetch_results_race, actual_top3_from_results  # type: ignore
+    # If you already have these helpers locally, we'll import them.
+    from benchmark_yesterday import (
+        is_gallops_meeting,  # type: ignore
+        fetch_results_race,  # type: ignore
+        actual_top3_from_results,  # type: ignore
+    )
 except Exception:
+
     def _text(o) -> str:
         return "" if o is None else str(o).strip().lower()
 
     def is_gallops_meeting(m: dict) -> bool:
+        """Robust gallops filter based on observed schedule fields.
+
+        Primary rules (correct way):
+          - 'event_type' == 'G' or 'type' == 'G'  => gallops
+          - 'event_type' in {'GR','H'} => not gallops
+          - 'domain' == 'HORSE' => gallops; {'DOG','GREYHOUND','HARNESS'} => not gallops
+        Fallback: keyword scan of misc fields.
+        """
+        evt = str(m.get("event_type") or m.get("type") or "").strip().upper()
         dom = str(m.get("domain") or "").strip().upper()
-        evt = str(m.get("event_type") or "").strip().upper()
-        if dom == "HORSE" and evt == "G":
+
+        if evt == "G" or dom == "HORSE":
             return True
-        if dom in {"DOG", "GREYHOUND"} or evt in {"GR"}:
+        if evt in {"GR", "H"}:
             return False
-        if dom in {"HARNESS"} or evt in {"H"}:
+        if dom in {"DOG", "GREYHOUND", "HARNESS"}:
             return False
+
+        # Fallback keyword sweep across common text-y fields
         for k in ("section", "code", "category", "sport", "type", "discipline"):
             s = _text(m.get(k))
             if any(x in s for x in ("gallop", "thoroughbred", "tbred")):
                 return True
             if any(x in s for x in ("dog", "grey", "greyhound", "harness", "trot", "pace")):
                 return False
+        # Default to True if uncertain — schedule payloads for G usually omit dog/harness terms.
         return True
 
     def fetch_results_race(day: str, meet_no: int, race_no: int) -> Optional[dict]:
-        import urllib.request, json as _json
+        import urllib.request
+        import json as _json
+
         try:
-            with urllib.request.urlopen(f"https://json.tab.co.nz/results/{day}/{meet_no}/{race_no}", timeout=20) as r:
+            with urllib.request.urlopen(
+                f"https://json.tab.co.nz/results/{day}/{meet_no}/{race_no}", timeout=20
+            ) as r:
                 return _json.loads(r.read().decode("utf-8"))
         except Exception:
             return None
@@ -102,11 +145,14 @@ except Exception:
         actual = [top3.get(1), top3.get(2), top3.get(3)]
         return [x for x in actual if x is not None], finish_map
 
-# ---------------- Core pulls ----------------
+
+# ---------------- Endpoints ----------------
 SCHED = "https://json.tab.co.nz/schedule/{day}"
-ODDS  = "https://json.tab.co.nz/odds/{day}/{meet}/{race}"
+ODDS = "https://json.tab.co.nz/odds/{day}/{meet}/{race}"
+
 
 def extract_prices_from_odds(payload: dict, race_no: int) -> Dict[int, Dict[str, float]]:
+    """Extract fixed and tote prices per runner for a specific race from an odds payload."""
     out: Dict[int, Dict[str, float]] = {}
 
     def _ins(entry: dict):
@@ -115,13 +161,18 @@ def extract_prices_from_odds(payload: dict, race_no: int) -> Dict[int, Dict[str,
         except Exception:
             return
         rec = out.setdefault(num, {})
-        if entry.get("ffwin") is not None: rec["win_fixed"]   = entry.get("ffwin")
-        if entry.get("ffplc") is not None: rec["place_fixed"] = entry.get("ffplc")
-        if entry.get("win")   is not None: rec["win_tote"]    = entry.get("win")
-        if entry.get("plc")   is not None: rec["place_tote"]  = entry.get("plc")
+        if entry.get("ffwin") is not None:
+            rec["win_fixed"] = entry.get("ffwin")
+        if entry.get("ffplc") is not None:
+            rec["place_fixed"] = entry.get("ffplc")
+        if entry.get("win") is not None:
+            rec["win_tote"] = entry.get("win")
+        if entry.get("plc") is not None:
+            rec["place_tote"] = entry.get("plc")
 
     if not isinstance(payload, dict):
         return out
+
     meetings = payload.get("meetings") or []
     if meetings:
         for m in meetings:
@@ -135,6 +186,7 @@ def extract_prices_from_odds(payload: dict, race_no: int) -> Dict[int, Dict[str,
                         _ins(e)
                     return out
         return out
+
     for r in payload.get("races") or []:
         try:
             rnum = int(r.get("number") or r.get("raceNumber"))
@@ -146,6 +198,7 @@ def extract_prices_from_odds(payload: dict, race_no: int) -> Dict[int, Dict[str,
             break
     return out
 
+
 def iter_days(start: str, end: str):
     d0 = datetime.fromisoformat(start).date()
     d1 = datetime.fromisoformat(end).date()
@@ -156,6 +209,7 @@ def iter_days(start: str, end: str):
         yield d.isoformat()
         d += timedelta(days=1)
 
+
 def safe_float(x):
     try:
         f = float(x)
@@ -163,13 +217,17 @@ def safe_float(x):
     except Exception:
         return None
 
+
 # ---------- logging ----------
+
 def _ts():
     return datetime.now().strftime("%H:%M:%S")
+
 
 def _log(msg: str, quiet: bool):
     if not quiet:
         print(f"[{_ts()}] {msg}", flush=True)
+
 
 def pull_range(start: str, end: str, quiet: bool = False) -> pd.DataFrame:
     sess = make_session()
@@ -197,7 +255,7 @@ def pull_range(start: str, end: str, quiet: bool = False) -> pd.DataFrame:
             gallops_meetings += 1
 
             meet_no = m.get("number") or m.get("meetingNumber")
-            venue   = m.get("venue") or m.get("meetingName")
+            venue = m.get("venue") or m.get("meetingName")
             if meet_no is None:
                 _log("  Skipping meeting with no number", quiet)
                 continue
@@ -212,7 +270,7 @@ def pull_range(start: str, end: str, quiet: bool = False) -> pd.DataFrame:
             total_meetings += 1
 
             for r in races:
-                race_no   = r.get("number") or r.get("raceNumber")
+                race_no = r.get("number") or r.get("raceNumber")
                 race_name = r.get("name") or r.get("raceName")
                 if race_no is None:
                     _log("    Race with no number. Skipping", quiet)
@@ -236,10 +294,14 @@ def pull_range(start: str, end: str, quiet: bool = False) -> pd.DataFrame:
                 top3, finish_map = actual_top3_from_results(res or {})
                 _log(f"      results ok. finishers recorded {len(finish_map)}", quiet)
 
-                dist      = r.get("distance") or r.get("raceDistance") or r.get("race_distance")
-                track     = r.get("track_condition") or r.get("trackCondition")
-                weather   = r.get("weather")
-                start_ts  = r.get("advertised_start") or r.get("start_time") or r.get("tote_start_time")
+                dist = r.get("distance") or r.get("raceDistance") or r.get("race_distance")
+                track = r.get("track_condition") or r.get("trackCondition")
+                weather = r.get("weather")
+                start_ts = (
+                    r.get("advertised_start")
+                    or r.get("start_time")
+                    or r.get("tote_start_time")
+                )
 
                 entries = r.get("runners") or r.get("entries") or []
                 if not entries and isinstance(odds, dict):
@@ -261,38 +323,43 @@ def pull_range(start: str, end: str, quiet: bool = False) -> pd.DataFrame:
                 _log(f"    Race {race_no}: building rows from {len(entries)} entries", quiet)
 
                 for e in entries:
-                    num  = e.get("number") or e.get("runnerNumber") or e.get("runner")
+                    num = e.get("number") or e.get("runnerNumber") or e.get("runner")
                     name = e.get("name") or e.get("runnerName")
                     jockey = e.get("jockey") or e.get("rider")
-                    barrier= e.get("barrier") or e.get("draw")
+                    barrier = e.get("barrier") or e.get("draw")
                     try:
                         num = int(num)
                     except Exception:
                         continue
                     p = prices.get(num, {})
-                    rows.append({
-                        "date": day,
-                        "meeting_number": meet_no,
-                        "meeting_venue": venue,
-                        "race_number": race_no,
-                        "race_name": race_name,
-                        "distance": dist,
-                        "track_condition": track,
-                        "weather": weather,
-                        "advertised_start": start_ts,
-                        "runner_number": num,
-                        "runner_name": name,
-                        "barrier": barrier,
-                        "jockey": jockey,
-                        "win_fixed": safe_float(p.get("win_fixed")),
-                        "place_fixed": safe_float(p.get("place_fixed")),
-                        "win_tote": safe_float(p.get("win_tote")),
-                        "place_tote": safe_float(p.get("place_tote")),
-                        "finish_position": finish_map.get(num),
-                    })
+                    rows.append(
+                        {
+                            "date": day,
+                            "meeting_number": meet_no,
+                            "meeting_venue": venue,
+                            "race_number": race_no,
+                            "race_name": race_name,
+                            "distance": dist,
+                            "track_condition": track,
+                            "weather": weather,
+                            "advertised_start": start_ts,
+                            "runner_number": num,
+                            "runner_name": name,
+                            "barrier": barrier,
+                            "jockey": jockey,
+                            "win_fixed": safe_float(p.get("win_fixed")),
+                            "place_fixed": safe_float(p.get("place_fixed")),
+                            "win_tote": safe_float(p.get("win_tote")),
+                            "place_tote": safe_float(p.get("place_tote")),
+                            "finish_position": finish_map.get(num),
+                        }
+                    )
                 total_rows = len(rows)
 
-        _log(f"Day {day} complete. Gallops meetings {gallops_meetings}. Rows so far {total_rows}", quiet)
+        _log(
+            f"Day {day} complete. Gallops meetings {gallops_meetings}. Rows so far {total_rows}",
+            quiet,
+        )
 
     df = pd.DataFrame(rows)
     if not df.empty:
@@ -313,34 +380,54 @@ def pull_range(start: str, end: str, quiet: bool = False) -> pd.DataFrame:
                 return datetime.fromisoformat(s).astimezone(timezone.utc).isoformat()
             except Exception:
                 return None
+
         df["advertised_start_iso"] = df["advertised_start"].map(_norm_start)
 
-    _log(f"Finished. Meetings {total_meetings}, races {total_races}, rows {len(df)}", quiet)
+    _log(
+        f"Finished. Meetings {total_meetings}, races {total_races}, rows {len(df)}",
+        quiet,
+    )
     return df
 
+
 # ---------------- CLI ----------------
+
 def main():
-    ap = argparse.ArgumentParser(description="Pull gallops schedule + odds + results into a parquet over a date range.")
+    ap = argparse.ArgumentParser(
+        description="Pull gallops schedule + odds + results into a parquet over a date range."
+    )
     ap.add_argument("--start", required=True, help="Start date YYYY-MM-DD")
-    ap.add_argument("--end",   required=True, help="End date YYYY-MM-DD")
+    ap.add_argument("--end", required=True, help="End date YYYY-MM-DD")
     ap.add_argument("--outdir", default=".", help="Output directory for parquet")
     ap.add_argument("--quiet", action="store_true", help="Silence console logging")
     args = ap.parse_args()
 
     quiet = bool(args.quiet)
     if not quiet:
-        print(f"[{datetime.now().strftime('%H:%M:%S')}] Args: start={args.start} end={args.end} outdir={args.outdir}", flush=True)
+        print(
+            f"[{datetime.now().strftime('%H:%M:%S')}] Args: start={args.start} end={args.end} outdir={args.outdir}",
+            flush=True,
+        )
 
     df = pull_range(args.start, args.end, quiet=quiet)
     out_name = f"gallops_{args.start}_to_{args.end}.parquet"
     out_path = os.path.join(args.outdir, out_name)
     if df.empty:
         if not quiet:
-            print("[{}] No rows found for that range. Nothing written.".format(datetime.now().strftime('%H:%M:%S')), flush=True)
+            print(
+                "[{}] No rows found for that range. Nothing written.".format(
+                    datetime.now().strftime("%H:%M:%S")
+                ),
+                flush=True,
+            )
         return
     df.to_parquet(out_path, index=False)
     if not quiet:
-        print(f"[{datetime.now().strftime('%H:%M:%S')}] OK wrote {len(df)} rows to {out_path}", flush=True)
+        print(
+            f"[{datetime.now().strftime('%H:%M:%S')}] OK wrote {len(df)} rows to {out_path}",
+            flush=True,
+        )
+
 
 if __name__ == "__main__":
     main()

@@ -1,0 +1,387 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - BetGPT{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Race Selection Panel -->
+    <div class="col-lg-4">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-calendar-alt me-2"></i>Race Selection
+                </h5>
+            </div>
+            <div class="card-body">
+                <form id="raceForm">
+                    <div class="mb-3">
+                        <label for="raceDate" class="form-label">Date</label>
+                        <input type="date" class="form-control" id="raceDate" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="meetNumber" class="form-label">Meeting Number</label>
+                        <input type="number" class="form-control" id="meetNumber" min="1" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="raceNumber" class="form-label">Race Number</label>
+                        <input type="number" class="form-control" id="raceNumber" min="1" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-search me-2"></i>Load Race
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="card shadow-sm mt-3">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-chart-bar me-2"></i>Quick Stats
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <div class="stat-item">
+                            <h4 class="text-primary mb-1" id="fieldSize">-</h4>
+                            <small class="text-muted">Field Size</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="stat-item">
+                            <h4 class="text-success mb-1" id="topPick">-</h4>
+                            <small class="text-muted">Top Pick</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Race Details and Results -->
+    <div class="col-lg-8">
+        <!-- Race Header -->
+        <div class="card shadow-sm mb-3" id="raceHeader" style="display: none;">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-8">
+                        <h4 class="card-title mb-1" id="raceTitle">-</h4>
+                        <p class="text-muted mb-0" id="raceDetails">-</p>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <button class="btn btn-outline-primary" onclick="getRecommendations()">
+                            <i class="fas fa-lightbulb me-2"></i>Get Recommendations
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Runners Table -->
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-list me-2"></i>Runners & Predictions
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
+                    <table class="table table-hover mb-0" id="runnersTable">
+                        <thead class="table-light sticky-top">
+                            <tr>
+                                <th>#</th>
+                                <th>Runner</th>
+                                <th>Jockey</th>
+                                <th>Barrier</th>
+                                <th>Win Fixed</th>
+                                <th>Win Tote</th>
+                                <th>Place Fixed</th>
+                                <th>Place Tote</th>
+                                <th>Model Win%</th>
+                                <th>Implied%</th>
+                                <th>Edge%</th>
+                                <th>Fair Odds</th>
+                            </tr>
+                        </thead>
+                        <tbody id="runnersTableBody">
+                            <tr>
+                                <td colspan="12" class="text-center text-muted py-4">
+                                    <i class="fas fa-horse fa-2x mb-3 d-block"></i>
+                                    Select a race to view runners and predictions
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recommendations Panel -->
+<div class="row mt-4" id="recommendationsPanel" style="display: none;">
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-header bg-success text-white">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-lightbulb me-2"></i>Betting Recommendations
+                </h5>
+            </div>
+            <div class="card-body">
+                <!-- Recommendation Settings -->
+                <div class="row mb-4">
+                    <div class="col-md-2">
+                        <label class="form-label">Bet Type</label>
+                        <select class="form-select" id="betType">
+                            <option value="place">Place</option>
+                            <option value="win">Win</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Market</label>
+                        <select class="form-select" id="market">
+                            <option value="fixed">Fixed</option>
+                            <option value="tote">Tote</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Model Weight</label>
+                        <input type="number" class="form-control" id="modelWeight" value="0.2" step="0.1" min="0" max="1">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Min Edge %</label>
+                        <input type="number" class="form-control" id="minEdge" value="0" step="0.1">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Bankroll</label>
+                        <input type="number" class="form-control" id="bankroll" value="100" step="10">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Kelly Fraction</label>
+                        <input type="number" class="form-control" id="kellyFraction" value="0.25" step="0.05" min="0" max="1">
+                    </div>
+                </div>
+
+                <!-- Recommendations Table -->
+                <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                    <table class="table table-hover" id="recommendationsTable">
+                        <thead class="table-light sticky-top">
+                            <tr>
+                                <th>Runner</th>
+                                <th>Market</th>
+                                <th>Odds</th>
+                                <th>Market%</th>
+                                <th>Model%</th>
+                                <th>Blend%</th>
+                                <th>Edge%</th>
+                                <th>EV</th>
+                                <th>Kelly%</th>
+                                <th>Stake</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recommendationsTableBody">
+                            <!-- Recommendations will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Set today's date as default
+document.getElementById('raceDate').value = new Date().toISOString().split('T')[0];
+
+// Global variables
+let currentRaceData = null;
+
+// Form submission
+document.getElementById('raceForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    loadRace();
+});
+
+function loadRace() {
+    const date = document.getElementById('raceDate').value;
+    const meetNo = document.getElementById('meetNumber').value;
+    const raceNo = document.getElementById('raceNumber').value;
+    
+    if (!date || !meetNo || !raceNo) {
+        alert('Please fill in all fields');
+        return;
+    }
+    
+    showLoading();
+    
+    fetch(`/api/race/${date}/${meetNo}/${raceNo}`)
+        .then(response => response.json())
+        .then(data => {
+            hideLoading();
+            if (data.error) {
+                alert('Error: ' + data.error);
+                return;
+            }
+            displayRaceData(data);
+        })
+        .catch(error => {
+            hideLoading();
+            console.error('Error:', error);
+            alert('Error loading race data');
+        });
+}
+
+function displayRaceData(data) {
+    currentRaceData = data;
+    
+    // Update race header
+    const raceInfo = data.race_info;
+    document.getElementById('raceTitle').textContent = 
+        `${raceInfo.venue} | Race ${raceInfo.race_no || 'Unknown'}`;
+    document.getElementById('raceDetails').textContent = 
+        `Distance: ${raceInfo.distance} | Track: ${raceInfo.track_condition} | Weather: ${raceInfo.weather}`;
+    document.getElementById('raceHeader').style.display = 'block';
+    
+    // Update quick stats
+    document.getElementById('fieldSize').textContent = data.field_size;
+    
+    // Update runners table
+    const tbody = document.getElementById('runnersTableBody');
+    tbody.innerHTML = '';
+    
+    if (data.runners && data.runners.length > 0) {
+        let topPick = null;
+        let topPickProb = 0;
+        
+        data.runners.forEach(runner => {
+            const modelPred = runner.model_prediction || {};
+            const winProb = modelPred.win_percentage || 0;
+            
+            if (winProb > topPickProb) {
+                topPick = runner.number;
+                topPickProb = winProb;
+            }
+            
+            const impliedProb = runner.implied_win_prob ? (runner.implied_win_prob * 100).toFixed(1) : '-';
+            const edge = modelPred.win_percentage && runner.implied_win_prob ? 
+                (modelPred.win_percentage - (runner.implied_win_prob * 100)).toFixed(1) : '-';
+            
+            const row = `
+                <tr>
+                    <td><strong>${runner.number}</strong></td>
+                    <td>
+                        ${runner.name}
+                        ${modelPred.new_horse ? '<span class="badge bg-warning ms-1">NEW</span>' : ''}
+                    </td>
+                    <td>${runner.jockey}</td>
+                    <td>${runner.barrier}</td>
+                    <td>${runner.odds.win_fixed || '-'}</td>
+                    <td>${runner.odds.win_tote || '-'}</td>
+                    <td class="text-primary"><strong>${modelPred.win_percentage ? modelPred.win_percentage.toFixed(1) : '-'}%</strong></td>
+                    <td>${impliedProb}%</td>
+                    <td class="${edge > 0 ? 'text-success' : 'text-muted'}">${edge}%</td>
+                    <td>${modelPred.fair_odds ? modelPred.fair_odds.toFixed(2) : '-'}</td>
+                </tr>
+            `;
+            tbody.innerHTML += row;
+        });
+        
+        document.getElementById('topPick').textContent = topPick || '-';
+    } else {
+        tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted py-4">No runners found</td></tr>';
+    }
+}
+
+function getRecommendations() {
+    if (!currentRaceData) {
+        alert('Please load a race first');
+        return;
+    }
+    
+    const settings = {
+        date: document.getElementById('raceDate').value,
+        meet_no: document.getElementById('meetNumber').value,
+        race_no: document.getElementById('raceNumber').value,
+        bet_type: document.getElementById('betType').value,
+        market: document.getElementById('market').value,
+        model_weight: parseFloat(document.getElementById('modelWeight').value),
+        min_edge: parseFloat(document.getElementById('minEdge').value),
+        bankroll: parseFloat(document.getElementById('bankroll').value),
+        kelly_fraction: parseFloat(document.getElementById('kellyFraction').value)
+    };
+    
+    showLoading();
+    
+    fetch('/api/recommendations', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(settings)
+    })
+    .then(response => response.json())
+    .then(data => {
+        hideLoading();
+        if (data.error) {
+            alert('Error: ' + data.error);
+            return;
+        }
+        displayRecommendations(data);
+    })
+    .catch(error => {
+        hideLoading();
+        console.error('Error:', error);
+        alert('Error getting recommendations');
+    });
+}
+
+function displayRecommendations(data) {
+    document.getElementById('recommendationsPanel').style.display = 'block';
+    
+    const tbody = document.getElementById('recommendationsTableBody');
+    tbody.innerHTML = '';
+    
+    if (data.recommendations && data.recommendations.length > 0) {
+        data.recommendations.forEach(rec => {
+            const row = `
+                <tr>
+                    <td><strong>#${rec.number} ${rec.runner}</strong></td>
+                    <td>${rec.market_label}</td>
+                    <td>${rec.odds}</td>
+                    <td>${rec.market_pct}%</td>
+                    <td>${rec.model_pct}%</td>
+                    <td>${rec.blend_pct}%</td>
+                    <td class="text-success"><strong>${rec.edge_pct}%</strong></td>
+                    <td>${rec.ev}</td>
+                    <td>${rec.kelly_pct}%</td>
+                    <td class="text-primary"><strong>$${rec.stake}</strong></td>
+                </tr>
+            `;
+            tbody.innerHTML += row;
+        });
+    } else {
+        tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted py-4">No recommendations found</td></tr>';
+    }
+}
+
+function showLoading() {
+    const modal = new bootstrap.Modal(document.getElementById('loadingModal'));
+    modal.show();
+}
+
+function hideLoading() {
+    const modal = bootstrap.Modal.getInstance(document.getElementById('loadingModal'));
+    if (modal) {
+        modal.hide();
+    }
+}
+
+function showAbout() {
+    const modal = new bootstrap.Modal(document.getElementById('aboutModal'));
+    modal.show();
+}
+</script>
+{% endblock %}
