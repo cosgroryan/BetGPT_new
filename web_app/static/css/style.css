@@ -358,6 +358,90 @@ main {
     min-height: calc(100vh - 76px);
 }
 
+/* Results highlighting */
+.result-position-1 {
+    background: linear-gradient(135deg, #ffd700, #ffed4e) !important;
+    color: #000 !important;
+    font-weight: bold !important;
+    border: 2px solid #ffd700 !important;
+}
+
+.result-position-2 {
+    background: linear-gradient(135deg, #c0c0c0, #e8e8e8) !important;
+    color: #000 !important;
+    font-weight: bold !important;
+    border: 2px solid #c0c0c0 !important;
+}
+
+.result-position-3 {
+    background: linear-gradient(135deg, #cd7f32, #daa520) !important;
+    color: #fff !important;
+    font-weight: bold !important;
+    border: 2px solid #cd7f32 !important;
+}
+
+.result-position-other {
+    background-color: #f8f9fa !important;
+    color: #6c757d !important;
+    opacity: 0.7;
+}
+
+/* Results mode - disable green gradients */
+.results-mode .gradient-green-1,
+.results-mode .gradient-green-2,
+.results-mode .gradient-green-3 {
+    background: none !important;
+    color: inherit !important;
+}
+
+/* Results table styling */
+.results-table {
+    margin-top: 1rem;
+}
+
+.results-table .table th {
+    background-color: #343a40;
+    color: white;
+    border: none;
+}
+
+.results-table .table td {
+    vertical-align: middle;
+}
+
+/* Position badges */
+.position-badge {
+    display: inline-block;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    text-align: center;
+    line-height: 30px;
+    font-weight: bold;
+    color: white;
+    margin-right: 10px;
+}
+
+.position-badge.pos-1 {
+    background: linear-gradient(135deg, #ffd700, #ffed4e);
+    color: #000;
+}
+
+.position-badge.pos-2 {
+    background: linear-gradient(135deg, #c0c0c0, #e8e8e8);
+    color: #000;
+}
+
+.position-badge.pos-3 {
+    background: linear-gradient(135deg, #cd7f32, #daa520);
+    color: #fff;
+}
+
+.position-badge.pos-other {
+    background-color: #6c757d;
+    color: white;
+}
+
 .probability-bar {
     height: 20px;
     background-color: #e9ecef;

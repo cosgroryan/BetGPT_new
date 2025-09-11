@@ -70,6 +70,9 @@
                         <p class="text-muted mb-0" id="raceDetails">-</p>
                     </div>
                     <div class="col-md-4 text-end">
+                        <button class="btn btn-outline-success me-2" id="resultsBtn" onclick="getRaceResults()" style="display: none;">
+                            <i class="fas fa-trophy me-2"></i>View Results
+                        </button>
                         <button class="btn btn-outline-primary" onclick="getRecommendations()">
                             <i class="fas fa-lightbulb me-2"></i>Get Recommendations
                         </button>
@@ -237,6 +240,9 @@ function loadRace() {
 function displayRaceData(data) {
     currentRaceData = data;
     
+    // Also update AppState for the App functions
+    AppState.currentRace = data;
+    
     // Update race header
     const raceInfo = data.race_info;
     document.getElementById('raceTitle').textContent = 
@@ -244,6 +250,9 @@ function displayRaceData(data) {
     document.getElementById('raceDetails').textContent = 
         `Distance: ${raceInfo.distance} | Track: ${raceInfo.track_condition} | Weather: ${raceInfo.weather}`;
     document.getElementById('raceHeader').style.display = 'block';
+    
+    // Show results button (will be hidden if no results available)
+    document.getElementById('resultsBtn').style.display = 'inline-block';
     
     // Update quick stats
     document.getElementById('fieldSize').textContent = data.field_size;
@@ -300,6 +309,10 @@ function getRecommendations() {
         alert('Please load a race first');
         return;
     }
+    
+    // Use the App function instead
+    App.getRecommendations();
+    return;
     
     const settings = {
         date: document.getElementById('raceDate').value,

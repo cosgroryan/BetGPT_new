@@ -92,7 +92,7 @@ def get_race_details(date_str, meet_no, race_no):
             # Continue without model predictions rather than failing
             
         # Process the data for the frontend
-        race_data = process_race_data(event, model_df)
+        race_data = process_race_data(event, model_df, date_str, meet_no, race_no)
         
         return jsonify(race_data)
         
@@ -167,7 +167,7 @@ def get_recommendations():
         logger.error(f"Error getting recommendations: {e}")
         return jsonify({'error': str(e)}), 500
 
-def process_race_data(event, model_df):
+def process_race_data(event, model_df, date_str=None, meet_no=None, race_no=None):
     """Process race event data for frontend consumption"""
     data = event.get("data", {})
     race = data.get("race", {})
@@ -182,7 +182,10 @@ def process_race_data(event, model_df):
         'weather': race.get("weather", ""),
         'positions_paid': race.get("positions_paid", 3),
         'start_time': race.get("start_time", ""),
-        'country': race.get("meeting_country", "")
+        'country': race.get("meeting_country", ""),
+        'date': date_str,
+        'meet_no': meet_no,
+        'race_no': race_no
     }
     
     # Process runners
@@ -243,6 +246,34 @@ def process_race_data(event, model_df):
         'runners': processed_runners,
         'field_size': len(processed_runners)
     }
+
+@app.route('/api/results/<date_str>/<int:meet_no>/<int:race_no>')
+def get_race_results(date_str, meet_no, race_no):
+    """Get race results for a completed race"""
+    try:
+        # Try to fetch results from local data first
+        results_data = data_service.fetch_race_results(date_str, meet_no, race_no)
+        
+        if results_data:
+            return jsonify({
+                'success': True,
+                'results': results_data,
+                'race_completed': True
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'Results not available',
+                'race_completed': False
+            })
+            
+    except Exception as e:
+        logger.error(f"Error fetching results: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'race_completed': False
+        }), 500
 
 @app.errorhandler(404)
 def not_found(error):

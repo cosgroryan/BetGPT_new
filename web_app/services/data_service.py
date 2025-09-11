@@ -315,3 +315,92 @@ class DataService:
         # This would fetch from the schedule API
         # For now, return empty list
         return []
+    
+    def fetch_race_results(self, date_str: str, meet_no: int, race_no: int) -> Optional[Dict]:
+        """Fetch race results from TAB API"""
+        try:
+            import requests
+            
+            # Use the TAB results API endpoint
+            results_url = f"https://json.tab.co.nz/results/{date_str}/{meet_no}/{race_no}"
+            
+            response = requests.get(results_url, headers=self.HEADERS, timeout=self.TIMEOUT)
+            
+            if response.status_code != 200:
+                self.logger.warning(f"Results API returned status {response.status_code} for {date_str} M{meet_no} R{race_no}")
+                return None
+            
+            data = response.json()
+            
+            # Extract race results from the JSON structure
+            meetings = data.get('meetings', [])
+            if meetings:
+                meeting = meetings[0]
+                races = meeting.get('races', [])
+                if races:
+                    race = races[0]
+                    
+                    # Check if race is completed
+                    status = race.get('status', '')
+                    if status.lower() == 'complete':
+                        # Extract placings (top 3)
+                        placings = race.get('placings', [])
+                        also_ran = race.get('also_ran', [])
+                        
+                        # Process placings
+                        results = []
+                        for placing in placings:
+                            results.append({
+                                'position': placing.get('rank', 0),
+                                'number': placing.get('number', ''),
+                                'name': placing.get('name', ''),
+                                'jockey': placing.get('jockey', ''),
+                                'margin': placing.get('margin', ''),
+                                'distance': placing.get('distance', ''),
+                                'favouritism': placing.get('favouritism', ''),
+                                'win_odds': placing.get('win_odds', ''),
+                                'place_odds': placing.get('place_odds', '')
+                            })
+                        
+                        # Process also ran (positions 4+)
+                        for runner in also_ran:
+                            finish_pos = runner.get('finish_position', 0)
+                            if finish_pos > 0:  # Only include runners that actually finished
+                                results.append({
+                                    'position': finish_pos,
+                                    'number': runner.get('number', ''),
+                                    'name': runner.get('name', ''),
+                                    'jockey': runner.get('jockey', ''),
+                                    'margin': '',
+                                    'distance': runner.get('distance', ''),
+                                    'favouritism': '',
+                                    'win_odds': '',
+                                    'place_odds': ''
+                                })
+                        
+                        # Sort by position
+                        results.sort(key=lambda x: x['position'])
+                        
+                        return {
+                            'race_info': {
+                                'date': date_str,
+                                'meet_no': meet_no,
+                                'race_no': race_no,
+                                'name': race.get('name', ''),
+                                'status': status,
+                                'distance': race.get('distance', ''),
+                                'class': race.get('class', ''),
+                                'stake': race.get('stake', 0)
+                            },
+                            'results': results,
+                            'scratchings': race.get('scratchings', [])
+                        }
+                    else:
+                        self.logger.info(f"Race {date_str} M{meet_no} R{race_no} status: {status} (not complete)")
+                        return None
+            
+            return None
+            
+        except Exception as e:
+            self.logger.error(f"Error fetching race results: {str(e)}")
+            return None

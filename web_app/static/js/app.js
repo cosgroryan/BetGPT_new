@@ -494,11 +494,220 @@ Press OK to clear stuck modals.`);
         if (debugInfo.modalBackdrops > 0 || debugInfo.activeModals > 0) {
             window.clearModals();
         }
+    },
+
+    /**
+     * Get race results
+     */
+    getRaceResults: async () => {
+        if (!AppState.currentRace) {
+            Utils.showError('Please load a race first');
+            return;
+        }
+        
+        const raceInfo = AppState.currentRace.race_info;
+        if (!raceInfo) {
+            Utils.showError('Race information not available');
+            return;
+        }
+        
+        const { date, meet_no, race_no } = raceInfo;
+        
+        console.log('Getting results for:', { date, meet_no, race_no });
+        
+        try {
+            Utils.showLoading();
+            
+            const response = await fetch(`/api/results/${date}/${meet_no}/${race_no}`);
+            const data = await response.json();
+            
+            if (data.success && data.race_completed) {
+                App.displayRaceResults(data.results);
+                // Show results button and hide it after clicking
+                document.getElementById('resultsBtn').style.display = 'none';
+            } else {
+                Utils.showError(data.message || 'Results not available for this race');
+            }
+            
+        } catch (error) {
+            console.error('Error getting race results:', error);
+            Utils.showError(`Failed to get race results: ${error.message}`);
+        } finally {
+            Utils.hideLoading();
+        }
+    },
+
+    /**
+     * Display race results with highlighting
+     */
+    displayRaceResults: (resultsData) => {
+        const { race_info, results } = resultsData;
+        
+        // Add results mode class to disable green gradients
+        document.body.classList.add('results-mode');
+        
+        // Update race header to show results
+        const raceTitle = document.getElementById('raceTitle');
+        raceTitle.innerHTML = `${race_info.name} <span class="badge bg-success ms-2">COMPLETED</span>`;
+        
+        // Create results table
+        const resultsTable = document.createElement('div');
+        resultsTable.className = 'card shadow-sm results-table';
+        resultsTable.innerHTML = `
+            <div class="card-header bg-success text-white">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-trophy me-2"></i>Race Results
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Position</th>
+                                <th>Number</th>
+                                <th>Horse</th>
+                                <th>Jockey</th>
+                                <th>Margin</th>
+                                <th>Distance</th>
+                                <th>Win Odds</th>
+                                <th>Place Odds</th>
+                            </tr>
+                        </thead>
+                        <tbody id="resultsTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+        
+        // Insert results table after race header
+        const raceHeader = document.getElementById('raceHeader');
+        raceHeader.insertAdjacentElement('afterend', resultsTable);
+        
+        // Populate results table
+        const tbody = document.getElementById('resultsTableBody');
+        tbody.innerHTML = '';
+        
+        results.forEach(result => {
+            const row = document.createElement('tr');
+            
+            // Determine position class
+            let positionClass = 'result-position-other';
+            let badgeClass = 'pos-other';
+            if (result.position === 1) {
+                positionClass = 'result-position-1';
+                badgeClass = 'pos-1';
+            } else if (result.position === 2) {
+                positionClass = 'result-position-2';
+                badgeClass = 'pos-2';
+            } else if (result.position === 3) {
+                positionClass = 'result-position-3';
+                badgeClass = 'pos-3';
+            }
+            
+            row.className = positionClass;
+            // Format odds based on position
+            let winOdds = '-';
+            let placeOdds = '-';
+            
+            if (result.position === 1 && result.win_odds) {
+                winOdds = Utils.formatOdds(result.win_odds);
+            }
+            if ((result.position === 2 || result.position === 3) && result.place_odds) {
+                placeOdds = Utils.formatOdds(result.place_odds);
+            }
+            
+            row.innerHTML = `
+                <td>
+                    <span class="position-badge ${badgeClass}">${result.position}</span>
+                </td>
+                <td><strong>${result.number}</strong></td>
+                <td><strong>${result.name}</strong></td>
+                <td>${result.jockey}</td>
+                <td>${result.margin || '-'}</td>
+                <td>${result.distance || '-'}</td>
+                <td>${winOdds}</td>
+                <td>${placeOdds}</td>
+            `;
+            
+            tbody.appendChild(row);
+        });
+        
+        // Update runners table to highlight results
+        App.highlightRunnersWithResults(results);
+        
+        // Scroll to results
+        resultsTable.scrollIntoView({ behavior: 'smooth' });
+    },
+
+    /**
+     * Highlight runners in the main table with their results
+     */
+    highlightRunnersWithResults: (results) => {
+        const runnersTable = document.getElementById('runnersTableBody');
+        const rows = runnersTable.querySelectorAll('tr');
+        
+        // Create a map of runner numbers to results
+        const resultsMap = {};
+        results.forEach(result => {
+            resultsMap[result.number] = result;
+        });
+        
+        rows.forEach(row => {
+            const numberCell = row.querySelector('td:first-child');
+            if (numberCell) {
+                const runnerNumber = numberCell.textContent.trim();
+                const result = resultsMap[runnerNumber];
+                
+                if (result) {
+                    // Add result highlighting
+                    let positionClass = 'result-position-other';
+                    if (result.position === 1) {
+                        positionClass = 'result-position-1';
+                    } else if (result.position === 2) {
+                        positionClass = 'result-position-2';
+                    } else if (result.position === 3) {
+                        positionClass = 'result-position-3';
+                    }
+                    
+                    row.classList.add(positionClass);
+                    
+                    // Add position indicator to the name
+                    const nameCell = row.querySelector('td:nth-child(2)');
+                    if (nameCell) {
+                        const positionBadge = document.createElement('span');
+                        positionBadge.className = `badge bg-secondary ms-2`;
+                        positionBadge.textContent = `${result.position}${App.getOrdinalSuffix(result.position)}`;
+                        nameCell.appendChild(positionBadge);
+                    }
+                }
+            }
+        });
+    },
+
+    /**
+     * Get ordinal suffix for position numbers
+     */
+    getOrdinalSuffix: (num) => {
+        const j = num % 10;
+        const k = num % 100;
+        if (j === 1 && k !== 11) {
+            return "st";
+        }
+        if (j === 2 && k !== 12) {
+            return "nd";
+        }
+        if (j === 3 && k !== 13) {
+            return "rd";
+        }
+        return "th";
     }
 };
 
 // Global functions for HTML onclick handlers
 window.getRecommendations = () => App.getRecommendations();
+window.getRaceResults = () => App.getRaceResults();
 window.showAbout = () => {
     const modal = new bootstrap.Modal(document.getElementById('aboutModal'));
     modal.show();
