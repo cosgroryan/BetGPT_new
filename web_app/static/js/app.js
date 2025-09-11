@@ -390,6 +390,9 @@ const App = {
         try {
             Utils.showLoading();
             
+            // Clear any existing results and reset UI state
+            App.clearResults();
+            
             // Add timeout to prevent hanging
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
@@ -688,6 +691,49 @@ Press OK to clear stuck modals.`);
             return "rd";
         }
         return "th";
+    },
+
+    /**
+     * Clear results and reset UI state
+     */
+    clearResults: () => {
+        // Remove results mode class
+        document.body.classList.remove('results-mode');
+        
+        // Remove any existing results table
+        const existingResultsTable = document.querySelector('.results-table');
+        if (existingResultsTable) {
+            existingResultsTable.remove();
+        }
+        
+        // Reset race header (remove COMPLETED badge)
+        const raceTitle = document.getElementById('raceTitle');
+        if (raceTitle) {
+            raceTitle.innerHTML = raceTitle.textContent.replace(' COMPLETED', '');
+        }
+        
+        // Clear results highlighting from runners table
+        const runnersTable = document.getElementById('runnersTableBody');
+        if (runnersTable) {
+            const rows = runnersTable.querySelectorAll('tr');
+            rows.forEach(row => {
+                // Remove result position classes
+                row.classList.remove('result-position-1', 'result-position-2', 'result-position-3', 'result-position-other');
+                
+                // Remove position badges from name cells
+                const nameCell = row.querySelector('td:nth-child(2)');
+                if (nameCell) {
+                    const badges = nameCell.querySelectorAll('.badge.bg-secondary');
+                    badges.forEach(badge => badge.remove());
+                }
+            });
+        }
+        
+        // Show results button again
+        const resultsBtn = document.getElementById('resultsBtn');
+        if (resultsBtn) {
+            resultsBtn.style.display = 'inline-block';
+        }
     }
 };
 
