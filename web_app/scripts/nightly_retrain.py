@@ -174,12 +174,38 @@ def atomic_model_swap(new_artifacts_dir):
     temp_artifacts_dir = project_root / 'artifacts_temp'
     
     try:
-        # Remove old artifacts directory
-        if artifacts_dir.exists():
-            shutil.rmtree(artifacts_dir)
+        if not temp_artifacts_dir.exists():
+            logger.error("No temporary artifacts directory found")
+            return False
         
-        # Move new artifacts to production location
-        shutil.move(str(temp_artifacts_dir), str(artifacts_dir))
+        # Ensure artifacts directory exists
+        artifacts_dir.mkdir(exist_ok=True)
+        
+        # Copy individual files instead of moving the entire directory
+        for item in temp_artifacts_dir.iterdir():
+            if item.is_file():
+                target_file = artifacts_dir / item.name
+                logger.info(f"Copying {item.name} to production location")
+                
+                # Remove existing file if it exists
+                if target_file.exists():
+                    target_file.unlink()
+                
+                # Copy new file
+                shutil.copy2(item, target_file)
+            elif item.is_dir():
+                target_dir = artifacts_dir / item.name
+                logger.info(f"Copying directory {item.name} to production location")
+                
+                # Remove existing directory if it exists
+                if target_dir.exists():
+                    shutil.rmtree(target_dir)
+                
+                # Copy new directory
+                shutil.copytree(item, target_dir)
+        
+        # Clean up temporary directory
+        shutil.rmtree(temp_artifacts_dir)
         
         logger.info("Model swap completed successfully")
         return True
