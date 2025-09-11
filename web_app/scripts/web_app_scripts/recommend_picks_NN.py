@@ -35,8 +35,8 @@ def _fair_odds(p, eps: float = 1e-12):
     return 1.0 / p
 
 
-def _nn_win_probs_for_race(race_df: pd.DataFrame, tau: float = 1.0, n_samples: int = 2000, seed: int = 42):
-    out = load_model_and_predict(race_df)
+def _nn_win_probs_for_race(race_df: pd.DataFrame, tau: float = 1.0, n_samples: int = 2000, seed: int = 42, model_path: str = "artifacts/model_regression.pth", artefacts_path: str = "artifacts/preprocess.pkl"):
+    out = load_model_and_predict(race_df, model_path=model_path, artefacts_path=artefacts_path)
     p_win = np.asarray(out.get("p_win_softmax")) if isinstance(out, dict) else None
     if p_win is not None and p_win.shape[0] == len(race_df) and np.isfinite(p_win).any():
         return p_win / (p_win.sum() if p_win.sum() > 0 else 1.0)
@@ -97,16 +97,16 @@ def recommend_for_race(meet_no: int, race_no: int, date_str: str):
     return "\n".join(lines)
 
 # --- Library helper for GUIs / other callers ---
-def model_win_table(meet_no: int, race_no: int, date_str: str) -> pd.DataFrame:
+def model_win_table(meet_no: int, race_no: int, date_str: str, model_path: str = "artifacts/model_regression.pth", artefacts_path: str = "artifacts/preprocess.pkl") -> pd.DataFrame:
     """Return per-runner model probabilities for one race."""
     sched = fetch_schedule_json(date_str, meet_no, race_no)
     df = schedule_json_to_df(sched)
     if df.empty:
         return pd.DataFrame(columns=["runner_number","runner_name","p_win","win_%","new_horse"])
 
-    p_win = _nn_win_probs_for_race(df)
+    p_win = _nn_win_probs_for_race(df, model_path=model_path, artefacts_path=artefacts_path)
     try:
-        nn_out = load_model_and_predict(df)
+        nn_out = load_model_and_predict(df, model_path=model_path, artefacts_path=artefacts_path)
         new_horse = np.asarray(nn_out.get("new_horse"), dtype=bool) if isinstance(nn_out, dict) else np.zeros(len(df), dtype=bool)
     except Exception:
         new_horse = np.zeros(len(df), dtype=bool)

@@ -121,7 +121,9 @@ def get_race_details(date_str, meet_no, race_no):
         
         # Get model predictions
         try:
-            model_df = model_win_table(meet_no, race_no, date_str)
+            model_df = model_win_table(meet_no, race_no, date_str, 
+                                     model_path="/app/artifacts/model_regression.pth", 
+                                     artefacts_path="/app/artifacts/preprocess.pkl")
             logger.info(f"Model predictions loaded successfully for {date_str} M{meet_no} R{race_no}")
         except Exception as e:
             logger.warning(f"Model prediction failed: {e}")
@@ -142,7 +144,9 @@ def get_predictions(date_str, meet_no, race_no):
     """Get model predictions for a specific race"""
     try:
         # Get model predictions
-        model_df = model_win_table(meet_no, race_no, date_str)
+        model_df = model_win_table(meet_no, race_no, date_str, 
+                                 model_path="/app/artifacts/model_regression.pth", 
+                                 artefacts_path="/app/artifacts/preprocess.pkl")
         
         if model_df.empty:
             return jsonify({'error': 'No predictions available'}), 404
@@ -187,7 +191,9 @@ def get_recommendations():
         
         # Get model predictions
         try:
-            model_df = model_win_table(meet_no, race_no, date_str)
+            model_df = model_win_table(meet_no, race_no, date_str, 
+                                     model_path="/app/artifacts/model_regression.pth", 
+                                     artefacts_path="/app/artifacts/preprocess.pkl")
         except Exception as e:
             logger.warning(f"Model prediction failed: {e}")
             model_df = pd.DataFrame()
