@@ -28,10 +28,13 @@ def get_project_root():
     # When running in Docker, we're in /app, so project root is /app
     # When running locally, we need to go up to the parent directory
     current_path = Path(__file__).parent
-    if current_path.name == 'scripts':
-        return current_path.parent.parent  # web_app/scripts -> web_app -> BetGPT_new
-    else:
+    
+    # Check if we're in Docker by looking for /app directory
+    if Path('/app').exists():
         return Path('/app')  # Docker environment
+    else:
+        # Local environment - go up from web_app/scripts to BetGPT_new
+        return current_path.parent.parent  # web_app/scripts -> web_app -> BetGPT_new
 
 def backup_current_model():
     """Create a backup of the current model"""
@@ -59,15 +62,26 @@ def update_dataset():
     logger.info("Updating dataset...")
     
     project_root = get_project_root()
+    logger.info(f"Project root: {project_root}")
     
     try:
         # Change to project root for data update
         original_cwd = os.getcwd()
         os.chdir(project_root)
+        logger.info(f"Changed to directory: {os.getcwd()}")
         
         # Run the data update script (without retraining)
-        # In Docker, the script is at scripts/web_app_scripts/update_data_retrain_model.py
-        script_path = 'scripts/web_app_scripts/update_data_retrain_model.py'
+        # Determine the correct script path based on environment
+        if Path('/app').exists():
+            # Docker environment
+            script_path = 'scripts/web_app_scripts/update_data_retrain_model.py'
+        else:
+            # Local environment
+            script_path = 'web_app/scripts/web_app_scripts/update_data_retrain_model.py'
+        
+        logger.info(f"Running script: {script_path}")
+        logger.info(f"Script exists: {Path(script_path).exists()}")
+        
         result = subprocess.run([
             sys.executable, script_path
         ], capture_output=True, text=True, timeout=1800)  # 30 minute timeout
@@ -104,7 +118,14 @@ def train_new_model():
         os.chdir(project_root)
         
         # Run the training script with retrain flag
-        script_path = 'scripts/web_app_scripts/update_data_retrain_model.py'
+        # Determine the correct script path based on environment
+        if Path('/app').exists():
+            # Docker environment
+            script_path = 'scripts/web_app_scripts/update_data_retrain_model.py'
+        else:
+            # Local environment
+            script_path = 'web_app/scripts/web_app_scripts/update_data_retrain_model.py'
+        
         result = subprocess.run([
             sys.executable, script_path, '--retrain'
         ], capture_output=True, text=True, timeout=3600)  # 1 hour timeout
