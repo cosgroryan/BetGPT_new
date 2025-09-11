@@ -13,11 +13,21 @@ from datetime import datetime
 from pathlib import Path
 
 # Setup logging
+# Use a writable log location (inside container or temp directory)
+log_file = '/var/log/betgpt_retrain.log'
+try:
+    # Try to create the log file to test permissions
+    with open(log_file, 'a'):
+        pass
+except PermissionError:
+    # Fall back to a writable location
+    log_file = '/tmp/betgpt_retrain.log'
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('/var/log/betgpt_retrain.log'),
+        logging.FileHandler(log_file),
         logging.StreamHandler()
     ]
 )
