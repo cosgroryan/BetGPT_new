@@ -91,6 +91,11 @@ def index():
     """Main dashboard page"""
     return render_template('index.html')
 
+@app.route('/health')
+def health():
+    """Health check endpoint"""
+    return jsonify({'status': 'healthy', 'service': 'betgpt-webapp'}), 200
+
 @app.route('/api/races/<date_str>')
 def get_races_for_date(date_str):
     """Get all races for a specific date"""
