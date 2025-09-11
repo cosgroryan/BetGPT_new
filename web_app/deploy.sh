@@ -18,9 +18,11 @@ if ! command -v docker &> /dev/null; then
     exit 1
 fi
 
-# Check if docker-compose is installed
-if ! command -v docker-compose &> /dev/null; then
-    echo "❌ Error: docker-compose is not installed. Please install docker-compose first."
+# Check if docker compose is installed (Docker Compose v2)
+if ! docker compose version &> /dev/null; then
+    echo "❌ Error: Docker Compose v2 is not installed. Please install Docker Compose v2 first."
+    echo "   On newer Docker installations, it's included with Docker Desktop."
+    echo "   For Linux: https://docs.docker.com/compose/install/"
     exit 1
 fi
 
@@ -51,34 +53,34 @@ fi
 
 # Build and start the application
 echo "🔨 Building Docker image..."
-docker-compose build
+docker compose build
 
 echo "🚀 Starting services..."
-docker-compose up -d
+docker compose up -d
 
 # Wait for services to start
 echo "⏳ Waiting for services to start..."
-sleep 10
+sleep 15
 
 # Check if services are running
 echo "🔍 Checking service status..."
-docker-compose ps
+docker compose ps
 
 # Test the application
 echo "🧪 Testing application..."
-if curl -f http://localhost:8080/health > /dev/null 2>&1; then
+if curl -f http://localhost/health > /dev/null 2>&1; then
     echo "✅ Application is running successfully!"
-    echo "🌐 Access your app at: http://localhost:8080"
+    echo "🌐 Access your app at: http://localhost"
 else
     echo "❌ Application health check failed. Checking logs..."
-    docker-compose logs web
+    docker compose logs betgpt-web
     exit 1
 fi
 
 echo "📊 Deployment Summary:"
-echo "   - Application URL: http://localhost:8080"
-echo "   - Health Check: http://localhost:8080/health"
-echo "   - Logs: docker-compose logs -f web"
-echo "   - Stop: docker-compose down"
+echo "   - Application URL: http://localhost"
+echo "   - Health Check: http://localhost/health"
+echo "   - Logs: docker compose logs -f betgpt-web"
+echo "   - Stop: docker compose down"
 
 echo "🎉 Deployment completed successfully!"
