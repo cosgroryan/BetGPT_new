@@ -29,8 +29,7 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx-locations.conf:/etc/nginx/conf.d/betgpt-locations.conf:ro
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
       betgpt-web:
         condition: service_healthy
