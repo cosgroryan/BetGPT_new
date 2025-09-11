@@ -5,7 +5,6 @@
 
 # Set environment variables
 export PATH="/usr/local/bin:/usr/bin:/bin"
-export PYTHONPATH="/home/ubuntu/BetGPT_new/scripts:$PYTHONPATH"
 
 # Change to the project directory
 cd /home/ubuntu/BetGPT_new/web_app
@@ -20,8 +19,9 @@ log() {
 
 log "Starting nightly model retraining..."
 
-# Run the retraining script
-python3 scripts/nightly_retrain.py >> "$LOG_FILE" 2>&1
+# Run the retraining script inside the Docker container
+# This ensures all dependencies are available
+docker compose exec -T betgpt-web python scripts/nightly_retrain.py >> "$LOG_FILE" 2>&1
 
 # Check if the retraining was successful
 if [ $? -eq 0 ]; then

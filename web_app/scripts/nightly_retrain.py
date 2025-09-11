@@ -25,7 +25,13 @@ logger = logging.getLogger(__name__)
 
 def get_project_root():
     """Get the project root directory"""
-    return Path(__file__).parent.parent.parent
+    # When running in Docker, we're in /app, so project root is /app
+    # When running locally, we need to go up to the parent directory
+    current_path = Path(__file__).parent
+    if current_path.name == 'scripts':
+        return current_path.parent.parent  # web_app/scripts -> web_app -> BetGPT_new
+    else:
+        return Path('/app')  # Docker environment
 
 def backup_current_model():
     """Create a backup of the current model"""
@@ -60,8 +66,10 @@ def update_dataset():
         os.chdir(project_root)
         
         # Run the data update script (without retraining)
+        # In Docker, the script is at scripts/web_app_scripts/update_data_retrain_model.py
+        script_path = 'scripts/web_app_scripts/update_data_retrain_model.py'
         result = subprocess.run([
-            sys.executable, 'web_app/scripts/web_app_scripts/update_data_retrain_model.py'
+            sys.executable, script_path
         ], capture_output=True, text=True, timeout=1800)  # 30 minute timeout
         
         if result.returncode == 0:
@@ -96,9 +104,9 @@ def train_new_model():
         os.chdir(project_root)
         
         # Run the training script with retrain flag
+        script_path = 'scripts/web_app_scripts/update_data_retrain_model.py'
         result = subprocess.run([
-            sys.executable, 'web_app/scripts/web_app_scripts/update_data_retrain_model.py',
-            '--retrain'
+            sys.executable, script_path, '--retrain'
         ], capture_output=True, text=True, timeout=3600)  # 1 hour timeout
         
         if result.returncode == 0:
