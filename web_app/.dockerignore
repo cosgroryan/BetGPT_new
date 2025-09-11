@@ -43,8 +43,8 @@ Thumbs.db
 DEPLOYMENT.md
 README.md
 
-# Large data files from parent directories
-../data/
+# Large data files from parent directories (commented out to allow volume mounting)
+# ../data/
 ../artifacts/
 ../artifacts_gbm/
 ../backups/
