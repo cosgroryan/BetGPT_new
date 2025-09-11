@@ -30,6 +30,7 @@ import math
 import os
 import pickle
 import random
+import sys
 from dataclasses import dataclass
 from typing import Dict, List, Tuple, Optional, Iterable
 
@@ -42,6 +43,18 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import mean_absolute_error, mean_squared_error
 from scipy.stats import spearmanr
 import unicodedata
+
+# Try to import tqdm for progress bars, fall back to simple progress if not available
+try:
+    from tqdm import tqdm
+    HAS_TQDM = True
+except ImportError:
+    HAS_TQDM = False
+    # Simple progress bar fallback
+    def tqdm(iterable, desc=None, total=None, **kwargs):
+        if desc:
+            print(f"\n{desc}")
+        return iterable
 
 # -----------------------------
 # Repro
@@ -528,9 +541,10 @@ def main():
 
     os.makedirs("artifacts", exist_ok=True)
 
-    # Load
-        # Load
+    # Load data with progress indicator
+    print("📂 Loading dataset...")
     df = pd.read_parquet(args.data)
+    print(f"✅ Loaded {len(df):,} rows from {args.data}")
 
     # --- NEW: restrict to horse gallops only ---
     if "domain" in df.columns:
@@ -559,8 +573,10 @@ def main():
         raise ValueError("No rows remain after filtering (domain=HORSE, event_type=G, scratches, valid date/target).")
 
     # Form features (leak-safe)
+    print("🔧 Building form features...")
     form_feat = build_horse_form_features(df)
     df = pd.concat([df, form_feat], axis=1)
+    print(f"✅ Added {len(form_feat.columns)} form features")
 
     # Extend numerics with form features (only those that exist)
     form_numeric = [
@@ -628,6 +644,8 @@ def main():
     if len(X_train_df) == 0 or len(X_val_df) == 0 or len(X_test_df) == 0:
         raise ValueError(f"Empty split(s): train={len(X_train_df)}, val={len(X_val_df)}, test={len(X_test_df)}. "
                          "Reduce filtering or adjust split ratios.")
+    
+    print(f"📊 Data split: Train={len(X_train_df):,} | Val={len(X_val_df):,} | Test={len(X_test_df):,}")
 
     if "runner_name" in X_train_df.columns:
         X_train_df.loc[:, "runner_name"] = X_train_df["runner_name"].astype(str).map(_norm_name)
@@ -689,12 +707,25 @@ def main():
     epochs_no_improve = 0
 
     # ----------------- Training (race-aware batches) -----------------
+    print(f"\n🚀 Starting training for {int(args.epochs)} epochs...")
+    print(f"📊 Training samples: {len(ds_train)}, Validation samples: {len(ds_val)}")
+    print(f"🔧 Device: {device}, Batch size: {int(args.batch_size)}")
+    print("=" * 80)
+    
     for epoch in range(1, int(args.epochs) + 1):
         model.train()
         epoch_loss = 0.0
         n_obs = 0
-
-        for batch_idx in ds_train.iter_race_batches(approx_batch_size=int(args.batch_size)):
+        
+        # Create progress bar for batches
+        batch_iter = ds_train.iter_race_batches(approx_batch_size=int(args.batch_size))
+        if HAS_TQDM:
+            batch_iter = tqdm(batch_iter, 
+                            desc=f"Epoch {epoch:03d}/{int(args.epochs)}", 
+                            unit="batch",
+                            leave=False)
+        
+        for batch_idx in batch_iter:
             xb_num = ds_train.x_num[batch_idx].to(device)
             xb_cat = ds_train.x_cat[batch_idx].to(device)
             y_rank = ds_train.y_rank[batch_idx].to(device)
@@ -723,17 +754,21 @@ def main():
             n_obs += bs
 
         # Validation (keep legacy prints + betting-style metric)
+        print(f"\n📈 Validating epoch {epoch:03d}...")
         val_loss, val_mae, val_rmse, val_spear = evaluate(
             model,
             _as_loader_like(ds_val, batch=int(args.batch_size)),
             None,
             device
         )
-        print(
-            f"Epoch {epoch:03d} | train_loss={epoch_loss/max(1,n_obs):.4f} "
-            f"val_loss={val_loss:.4f} val_mae={val_mae:.4f} val_rmse={val_rmse:.4f} "
-            f"val_spearman={val_spear:.4f}"
-        )
+        
+        # Enhanced epoch output with emojis and better formatting
+        train_loss = epoch_loss / max(1, n_obs)
+        print(f"✅ Epoch {epoch:03d}/{int(args.epochs)} Complete!")
+        print(f"   📉 Train Loss: {train_loss:.4f}")
+        print(f"   📊 Val Loss: {val_loss:.4f} | MAE: {val_mae:.4f} | RMSE: {val_rmse:.4f}")
+        print(f"   🎯 Spearman: {val_spear:.4f}")
+        print("-" * 60)
 
         # Early stop on a composite that prioritises winner sharpness: Spearman + proxy from hit-rate printed inside evaluate
         improved = (val_spear > best_score)
@@ -751,12 +786,18 @@ def main():
         model.load_state_dict(best_state)
 
     # Final test
+    print(f"\n🎯 Final evaluation on test set...")
     test_loss, test_mae, test_rmse, test_spear = evaluate(
         model, _as_loader_like(ds_test, batch=int(args.batch_size)), None, device
     )
-    print(f"TEST | loss={test_loss:.4f} MAE={test_mae:.4f} RMSE={test_rmse:.4f} Spearman={test_spear:.4f}")
+    print(f"🏆 FINAL TEST RESULTS:")
+    print(f"   📉 Loss: {test_loss:.4f}")
+    print(f"   📊 MAE: {test_mae:.4f} | RMSE: {test_rmse:.4f}")
+    print(f"   🎯 Spearman: {test_spear:.4f}")
+    print("=" * 80)
 
     # Save artefacts
+    print("💾 Saving model artifacts...")
     artefacts = PreprocessArtifacts(
         numeric_cols=[c for c in numeric_cols if c in X_all.columns],
         categorical_cols=[c for c in categorical_cols if c in X_all.columns],
@@ -773,7 +814,8 @@ def main():
             {"val_spearman": best_score, "test_mae": test_mae, "test_rmse": test_rmse, "test_spearman": test_spear},
             f, indent=2
         )
-    print("Saved model + preprocess artefacts in ./artifacts/")
+    print("✅ Model and artifacts saved successfully!")
+    print("🎉 Training completed successfully!")
 
 def _as_loader_like(ds: RacingDataset, batch: int = 4096):
     """
