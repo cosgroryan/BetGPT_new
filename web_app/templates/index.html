@@ -97,6 +97,10 @@
                                 <th>Runner</th>
                                 <th>Jockey</th>
                                 <th>Barrier</th>
+                                <th>Weight</th>
+                                <th>Form</th>
+                                <th>Speedmap</th>
+                                <th>Edge</th>
                                 <th>Win Fixed</th>
                                 <th>Win Tote</th>
                                 <th>Place Fixed</th>
@@ -109,7 +113,7 @@
                         </thead>
                         <tbody id="runnersTableBody">
                             <tr>
-                                <td colspan="12" class="text-center text-muted py-4">
+                                <td colspan="16" class="text-center text-muted py-4">
                                     <i class="fas fa-horse fa-2x mb-3 d-block"></i>
                                     Select a race to view runners and predictions
                                 </td>
@@ -287,8 +291,14 @@ function displayRaceData(data) {
                     </td>
                     <td>${runner.jockey}</td>
                     <td>${runner.barrier}</td>
+                    <td>${runner.weight || '-'}</td>
+                    <td class="form-cell" title="${runner.form || 'No form data'}">${runner.form ? (runner.form.length > 10 ? runner.form.substring(0, 10) + '...' : runner.form) : '-'}</td>
+                    <td class="speedmap-cell">${runner.speedmap || '-'}</td>
+                    <td class="edge-cell">${runner.edge || '-'}</td>
                     <td>${runner.odds.win_fixed || '-'}</td>
                     <td>${runner.odds.win_tote || '-'}</td>
+                    <td>${runner.odds.place_fixed || '-'}</td>
+                    <td>${runner.odds.place_tote || '-'}</td>
                     <td class="text-primary"><strong>${modelPred.win_percentage ? modelPred.win_percentage.toFixed(1) : '-'}%</strong></td>
                     <td>${impliedProb}%</td>
                     <td class="${edge > 0 ? 'text-success' : 'text-muted'}">${edge}%</td>
@@ -300,7 +310,7 @@ function displayRaceData(data) {
         
         document.getElementById('topPick').textContent = topPick || '-';
     } else {
-        tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted py-4">No runners found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="16" class="text-center text-muted py-4">No runners found</td></tr>';
     }
 }
 

@@ -456,6 +456,30 @@ main {
     transition: width 0.3s ease;
 }
 
+/* Form and Edge styling */
+.form-cell {
+    font-family: monospace;
+    font-size: 0.85em;
+    max-width: 80px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.speedmap-cell {
+    font-size: 0.9em;
+    font-weight: 500;
+}
+
+.edge-cell {
+    font-size: 0.85em;
+    font-weight: 600;
+}
+
+.edge-cell:not(:empty) {
+    color: var(--success-color);
+}
+
 /* Print Styles */
 @media print {
     .navbar, .btn, footer {

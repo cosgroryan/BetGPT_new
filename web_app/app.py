@@ -305,12 +305,52 @@ def process_race_data(event, model_df, date_str=None, meet_no=None, race_no=None
         # Calculate implied probabilities
         imp_win = _imp_from_fixed(win_fixed)
         
+        # Extract weight information (handle both dict and string formats)
+        weight_info = runner.get("weight", "")
+        if isinstance(weight_info, dict):
+            weight = weight_info.get("allocated") or weight_info.get("total") or ""
+        else:
+            weight = str(weight_info) if weight_info else ""
+        
+        # Extract form information
+        form = runner.get("last_twenty_starts", "")
+        form_indicators = runner.get("form_indicators", [])
+        
+        # Extract speedmap information
+        speedmap_info = runner.get("speedmap", {})
+        speedmap_label = ""
+        if isinstance(speedmap_info, dict):
+            speedmap_label = (speedmap_info.get("label") or "").strip()
+        
+        # Extract edge information from form indicators
+        edge_tags = []
+        if isinstance(form_indicators, list):
+            for indicator in form_indicators:
+                group = (indicator.get("group") or "").strip()
+                name = (indicator.get("name") or "").strip().lower()
+                negative = bool(indicator.get("negative"))
+                
+                if group in {"Track_Distance", "Course_Distance"} and not negative:
+                    edge_tags.append("TD+")
+                if group == "Track" and not negative:
+                    edge_tags.append("T+")
+                if group == "Distance" and not negative:
+                    edge_tags.append("D+")
+                if "hat-trick" in name and not negative:
+                    edge_tags.append("HTR")
+        
+        # Remove duplicates and join edge tags
+        edge = " ".join(list(dict.fromkeys(edge_tags)))  # dict.fromkeys preserves order
+        
         processed_runner = {
             'number': runner_number,
             'name': runner_name,
             'jockey': runner.get("jockey", ""),
             'barrier': runner.get("barrier", ""),
-            'weight': runner.get("weight", ""),
+            'weight': weight,
+            'form': form,
+            'speedmap': speedmap_label,
+            'edge': edge,
             'odds': {
                 'win_fixed': win_fixed,
                 'place_fixed': place_fixed,

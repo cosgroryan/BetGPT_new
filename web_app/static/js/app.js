@@ -208,7 +208,7 @@ const UI = {
         if (!raceData.runners || raceData.runners.length === 0) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="12" class="text-center text-muted py-4">
+                    <td colspan="16" class="text-center text-muted py-4">
                         <i class="fas fa-horse fa-2x mb-3 d-block"></i>
                         No runners found
                     </td>
@@ -239,6 +239,10 @@ const UI = {
                     </td>
                     <td>${runner.jockey}</td>
                     <td>${runner.barrier}</td>
+                    <td>${runner.weight || '-'}</td>
+                    <td class="form-cell" title="${runner.form || 'No form data'}">${runner.form ? (runner.form.length > 10 ? runner.form.substring(0, 10) + '...' : runner.form) : '-'}</td>
+                    <td class="speedmap-cell">${runner.speedmap || '-'}</td>
+                    <td class="edge-cell">${runner.edge || '-'}</td>
                     <td>${Utils.formatOdds(runner.odds.win_fixed)}</td>
                     <td>${Utils.formatOdds(runner.odds.win_tote)}</td>
                     <td>${Utils.formatOdds(runner.odds.place_fixed)}</td>
