@@ -44,7 +44,7 @@ tzdata==2025.2
 # Utilities
 packaging==25.0
 six==1.17.0
-tqdm==4.66.1
+tqdm
 
 # Optional: Database (uncomment if needed)
 # psycopg2-binary==2.9.7
