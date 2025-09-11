@@ -10,7 +10,7 @@ services:
       - FLASK_DEBUG=false
       - SECRET_KEY=your-secret-key-here-change-this-in-production
     volumes:
-      - ../artifacts:/app/artifacts:ro
+      - ../artifacts:/app/artifacts
       - ../artifacts_gbm:/app/artifacts_gbm:ro
       - ../data:/app/data:ro
       - ./scripts:/app/scripts:ro
