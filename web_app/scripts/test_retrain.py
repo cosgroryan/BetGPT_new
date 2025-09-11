@@ -1,17 +1,25 @@
-#!/bin/bash
+#!/usr/bin/env python3
+"""
+Test script for the nightly retraining process
+Run this to test the retraining without waiting for cron
+"""
 
-# Test script for the nightly retraining process
-# Run this to test the retraining without waiting for cron
+import sys
+import os
+from pathlib import Path
 
-echo "Testing nightly model retraining..."
+# Add the scripts directory to Python path
+script_dir = Path(__file__).parent
+sys.path.insert(0, str(script_dir))
 
-# Run the retraining script inside the Docker container
-docker compose exec -T betgpt-web python scripts/nightly_retrain.py
+from nightly_retrain import main
 
-# Check if the retraining was successful
-if [ $? -eq 0 ]; then
-    echo "✅ Test retraining completed successfully!"
-else
-    echo "❌ Test retraining failed!"
-    exit 1
-fi
+if __name__ == "__main__":
+    print("Testing nightly model retraining...")
+    success = main()
+    
+    if success:
+        print("✅ Test retraining completed successfully!")
+    else:
+        print("❌ Test retraining failed!")
+        sys.exit(1)

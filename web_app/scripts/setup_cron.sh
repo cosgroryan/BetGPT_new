@@ -18,7 +18,7 @@ sudo chmod 644 /var/log/betgpt_cron.log
 
 # Make the retraining scripts executable
 chmod +x /home/ubuntu/BetGPT_new/web_app/scripts/run_nightly_retrain.sh
-chmod +x /home/ubuntu/BetGPT_new/web_app/scripts/test_retrain.py
+chmod +x /home/ubuntu/BetGPT_new/web_app/scripts/test_retrain_docker.sh
 
 # Add cron job (runs every night at 2 AM)
 (crontab -l 2>/dev/null; echo "0 2 * * * /home/ubuntu/BetGPT_new/web_app/scripts/run_nightly_retrain.sh") | crontab -
