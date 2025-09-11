@@ -12,7 +12,7 @@ services:
     volumes:
       - ../artifacts:/app/artifacts:ro
       - ../artifacts_gbm:/app/artifacts_gbm:ro
-      - ../five_year_dataset.parquet:/app/five_year_dataset.parquet:ro
+      - ../data:/app/data:ro
       - ./scripts:/app/scripts:ro
     restart: unless-stopped
     healthcheck:

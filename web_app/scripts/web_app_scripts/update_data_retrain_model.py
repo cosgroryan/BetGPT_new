@@ -41,7 +41,11 @@ import pandas as pd
 # ---------------------------
 # Config
 # ---------------------------
-DATA_PATH_DEFAULT = "five_year_dataset.parquet"
+# Use data/parquet/five_year_dataset.parquet if it exists, otherwise fall back to current directory
+if os.path.exists("data/parquet/five_year_dataset.parquet"):
+    DATA_PATH_DEFAULT = "data/parquet/five_year_dataset.parquet"
+else:
+    DATA_PATH_DEFAULT = "five_year_dataset.parquet"
 
 TAB_RESULTS_BASE = "https://json.tab.co.nz/results"  # results/{YYYY-MM-DD}/{meet}/{race}
 
