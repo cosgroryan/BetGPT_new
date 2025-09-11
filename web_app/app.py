@@ -32,14 +32,28 @@ for path in possible_script_paths:
     if os.path.exists(path) and path not in sys.path:
         sys.path.append(path)
 
-# Set working directory
-parent_dir = '/app' if os.path.exists('/app/artifacts') else os.path.dirname(os.path.dirname(current_dir))
+# Set working directory and model paths
+if os.path.exists('/app/artifacts'):
+    # Docker environment
+    parent_dir = '/app'
+    MODEL_PATH = '/app/artifacts/model_regression.pth'
+    ARTIFACTS_PATH = '/app/artifacts/preprocess.pkl'
+else:
+    # Local environment - artifacts are in the parent directory of web_app
+    parent_dir = os.path.dirname(current_dir)  # This is BetGPT_new
+    MODEL_PATH = os.path.join(parent_dir, 'artifacts', 'model_regression.pth')
+    ARTIFACTS_PATH = os.path.join(parent_dir, 'artifacts', 'preprocess.pkl')
+
 os.chdir(parent_dir)
 
 # Debug information
 print(f"🔍 Debug Info:")
 print(f"   Working directory: {os.getcwd()}")
 print(f"   Scripts paths added: {[p for p in possible_script_paths if os.path.exists(p)]}")
+print(f"   Model path: {MODEL_PATH}")
+print(f"   Artifacts path: {ARTIFACTS_PATH}")
+print(f"   Model file exists: {os.path.exists(MODEL_PATH)}")
+print(f"   Artifacts file exists: {os.path.exists(ARTIFACTS_PATH)}")
 
 # Import model modules
 try:
@@ -147,8 +161,8 @@ def get_race_details(date_str, meet_no, race_no):
         # Get model predictions
         try:
             model_df = model_win_table(meet_no, race_no, date_str, 
-                                     model_path="/app/artifacts/model_regression.pth", 
-                                     artefacts_path="/app/artifacts/preprocess.pkl")
+                                     model_path=MODEL_PATH, 
+                                     artefacts_path=ARTIFACTS_PATH)
             logger.info(f"Model predictions loaded successfully for {date_str} M{meet_no} R{race_no}")
         except Exception as e:
             logger.warning(f"Model prediction failed: {e}")
@@ -217,8 +231,8 @@ def get_recommendations():
         # Get model predictions
         try:
             model_df = model_win_table(meet_no, race_no, date_str, 
-                                     model_path="/app/artifacts/model_regression.pth", 
-                                     artefacts_path="/app/artifacts/preprocess.pkl")
+                                     model_path=MODEL_PATH, 
+                                     artefacts_path=ARTIFACTS_PATH)
         except Exception as e:
             logger.warning(f"Model prediction failed: {e}")
             model_df = pd.DataFrame()
