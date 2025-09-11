@@ -13,10 +13,11 @@ This document summarizes all the fixes included in the `rebuild.sh` script.
 
 ### 2. **Python Import Path Issues** ✅
 - **Problem**: `ModuleNotFoundError: No module named 'recommend_picks_NN'`
-- **Root Cause**: Python path not correctly set up for Docker environment
-- **Fix**: Updated `app.py` to detect Docker vs local environment and set paths accordingly:
-  - Docker: `/app/scripts/web_app_scripts` and `/app/scripts/helper_scripts`
-  - Local: `web_app/scripts/web_app_scripts` and `web_app/scripts/helper_scripts`
+- **Root Cause**: Scripts directory not mounted correctly in Docker container
+- **Fix**: 
+  - Updated `docker-compose.yml` to mount `./scripts:/app/scripts:ro` (from current directory)
+  - Simplified `app.py` import logic to try multiple possible paths
+  - Scripts are now in `web_app/scripts/web_app_scripts/` and `web_app/scripts/helper_scripts/`
 
 ### 3. **Port Configuration** ✅
 - **Problem**: Flask app running on wrong port, health checks failing

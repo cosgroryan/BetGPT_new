@@ -36,7 +36,7 @@ docker compose down --remove-orphans
 # Rebuild and start containers
 echo "🔨 Rebuilding containers with all fixes..."
 echo "   - Model path fixes (absolute paths)"
-echo "   - Python import path fixes (Docker vs local)"
+echo "   - Python import path fixes (scripts in ./scripts/)"
 echo "   - Port 8080 configuration"
 echo "   - Nginx proxy configuration"
 echo "   - Static file serving fixes"

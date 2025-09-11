@@ -13,7 +13,7 @@ services:
       - ../artifacts:/app/artifacts:ro
       - ../artifacts_gbm:/app/artifacts_gbm:ro
       - ../five_year_dataset.parquet:/app/five_year_dataset.parquet:ro
-      - ../scripts:/app/scripts:ro
+      - ./scripts:/app/scripts:ro
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]

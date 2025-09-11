@@ -16,43 +16,41 @@ from flask_cors import CORS
 import pandas as pd
 import numpy as np
 
-# Add paths for imports - handle both local and Docker environments
+# Add paths for imports - simplified and robust
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
-# In Docker container, scripts are mounted at /app/scripts
-# In local development, scripts are in web_app/scripts
-if os.path.exists('/app/scripts'):
-    # Docker environment
-    sys.path.append('/app/scripts/web_app_scripts')
-    sys.path.append('/app/scripts/helper_scripts')
-    parent_dir = '/app'
-else:
-    # Local development environment
-    parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    sys.path.append(parent_dir)
-    sys.path.append(os.path.join(current_dir, 'scripts', 'web_app_scripts'))
-    sys.path.append(os.path.join(current_dir, 'scripts', 'helper_scripts'))
+# Try multiple possible paths for scripts
+possible_script_paths = [
+    '/app/scripts/web_app_scripts',  # Docker
+    '/app/scripts/helper_scripts',   # Docker
+    os.path.join(current_dir, 'scripts', 'web_app_scripts'),  # Local
+    os.path.join(current_dir, 'scripts', 'helper_scripts'),   # Local
+]
 
-# Change working directory to parent for model files
+# Add existing paths to sys.path
+for path in possible_script_paths:
+    if os.path.exists(path) and path not in sys.path:
+        sys.path.append(path)
+
+# Set working directory
+parent_dir = '/app' if os.path.exists('/app/artifacts') else os.path.dirname(os.path.dirname(current_dir))
 os.chdir(parent_dir)
 
-# Debug: Print path information
+# Debug information
 print(f"🔍 Debug Info:")
-print(f"   Current working directory: {os.getcwd()}")
-print(f"   Python path: {sys.path}")
-print(f"   Scripts directory exists: {os.path.exists('/app/scripts') if os.path.exists('/app/scripts') else os.path.exists(os.path.join(current_dir, 'scripts'))}")
+print(f"   Working directory: {os.getcwd()}")
+print(f"   Scripts paths added: {[p for p in possible_script_paths if os.path.exists(p)]}")
 
-# Import our existing modules from organized script locations
+# Import model modules
 try:
     from recommend_picks_NN import model_win_table
     from pytorch_pre import load_model_and_predict
-    print("✅ Successfully imported model modules")
+    print("✅ Model modules imported successfully")
 except ImportError as e:
     print(f"❌ Import error: {e}")
-    print(f"   Available files in scripts directory:")
-    scripts_dir = '/app/scripts' if os.path.exists('/app/scripts') else os.path.join(current_dir, 'scripts')
-    if os.path.exists(scripts_dir):
-        for root, dirs, files in os.walk(scripts_dir):
+    print(f"   Available files in /app/scripts:")
+    if os.path.exists('/app/scripts'):
+        for root, dirs, files in os.walk('/app/scripts'):
             for file in files:
                 print(f"     {os.path.join(root, file)}")
     raise
