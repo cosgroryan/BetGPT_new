@@ -562,18 +562,16 @@ Press OK to clear stuck modals.`);
             <div class="card-body p-0">
                 <div class="table-responsive">
                     <table class="table table-hover mb-0">
-                        <thead>
-                            <tr>
-                                <th>Position</th>
-                                <th>Number</th>
-                                <th>Horse</th>
-                                <th>Jockey</th>
-                                <th>Margin</th>
-                                <th>Distance</th>
-                                <th>Win Odds</th>
-                                <th>Place Odds</th>
-                            </tr>
-                        </thead>
+                         <thead>
+                             <tr>
+                                 <th>Position</th>
+                                 <th>Number</th>
+                                 <th>Horse</th>
+                                 <th>Jockey</th>
+                                 <th>Margin</th>
+                                 <th>Distance</th>
+                             </tr>
+                         </thead>
                         <tbody id="resultsTableBody">
                         </tbody>
                     </table>
@@ -606,30 +604,18 @@ Press OK to clear stuck modals.`);
                 badgeClass = 'pos-3';
             }
             
-            row.className = positionClass;
-            // Format odds based on position
-            let winOdds = '-';
-            let placeOdds = '-';
-            
-            if (result.position === 1 && result.win_odds) {
-                winOdds = Utils.formatOdds(result.win_odds);
-            }
-            if ((result.position === 2 || result.position === 3) && result.place_odds) {
-                placeOdds = Utils.formatOdds(result.place_odds);
-            }
-            
-            row.innerHTML = `
-                <td>
-                    <span class="position-badge ${badgeClass}">${result.position}</span>
-                </td>
-                <td><strong>${result.number}</strong></td>
-                <td><strong>${result.name}</strong></td>
-                <td>${result.jockey}</td>
-                <td>${result.margin || '-'}</td>
-                <td>${result.distance || '-'}</td>
-                <td>${winOdds}</td>
-                <td>${placeOdds}</td>
-            `;
+             row.className = positionClass;
+             
+             row.innerHTML = `
+                 <td>
+                     <span class="position-badge ${badgeClass}">${result.position}</span>
+                 </td>
+                 <td><strong>${result.number}</strong></td>
+                 <td><strong>${result.name}</strong></td>
+                 <td>${result.jockey}</td>
+                 <td>${result.margin || '-'}</td>
+                 <td>${result.distance || '-'}</td>
+             `;
             
             tbody.appendChild(row);
         });
