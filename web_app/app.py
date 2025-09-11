@@ -220,28 +220,34 @@ def get_recommendations():
     try:
         data = request.get_json()
         
-        # Extract parameters
-        date_str = data.get('date')
-        meet_no = int(data.get('meet_no'))
-        race_no = int(data.get('race_no'))
-        
-        # Fetch race data
-        event = data_service.fetch_race_data(date_str, meet_no, race_no)
-        
-        # Get model predictions
-        try:
-            model_df = model_win_table(meet_no, race_no, date_str, 
-                                     model_path=MODEL_PATH, 
-                                     artefacts_path=ARTIFACTS_PATH)
-        except Exception as e:
-            logger.warning(f"Model prediction failed: {e}")
-            model_df = pd.DataFrame()
-        
-        # Process race data
-        race_data = process_race_data(event, model_df)
+        # Check if race data is provided directly (preferred method)
+        if 'race_data' in data:
+            race_data = data['race_data']
+            settings = {k: v for k, v in data.items() if k != 'race_data'}
+        else:
+            # Fallback to fetching race data (legacy method)
+            date_str = data.get('date')
+            meet_no = int(data.get('meet_no'))
+            race_no = int(data.get('race_no'))
+            
+            # Fetch race data
+            event = data_service.fetch_race_data(date_str, meet_no, race_no)
+            
+            # Get model predictions
+            try:
+                model_df = model_win_table(meet_no, race_no, date_str, 
+                                         model_path=MODEL_PATH, 
+                                         artefacts_path=ARTIFACTS_PATH)
+            except Exception as e:
+                logger.warning(f"Model prediction failed: {e}")
+                model_df = pd.DataFrame()
+            
+            # Process race data
+            race_data = process_race_data(event, model_df)
+            settings = data
         
         # Generate recommendations using the recommendation service
-        recommendations = recommendation_service.generate_recommendations(race_data, data)
+        recommendations = recommendation_service.generate_recommendations(race_data, settings)
         
         return jsonify(recommendations)
         

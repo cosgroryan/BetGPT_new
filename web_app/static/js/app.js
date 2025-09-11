@@ -439,15 +439,14 @@ const App = {
         }
         
         const settings = {
-            date: document.getElementById('raceDate').value,
-            meet_no: parseInt(document.getElementById('meetNumber').value),
-            race_no: parseInt(document.getElementById('raceNumber').value),
             bet_type: document.getElementById('betType').value,
             market: document.getElementById('market').value,
             model_weight: parseFloat(document.getElementById('modelWeight').value),
             min_edge: parseFloat(document.getElementById('minEdge').value),
             bankroll: parseFloat(document.getElementById('bankroll').value),
-            kelly_fraction: parseFloat(document.getElementById('kellyFraction').value)
+            kelly_fraction: parseFloat(document.getElementById('kellyFraction').value),
+            // Pass the current race data directly to ensure consistency
+            race_data: AppState.currentRace
         };
         
         try {

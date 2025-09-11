@@ -94,7 +94,7 @@ class RecommendationService:
             
             # Get model prediction
             model_pred = runner.get('model_prediction', {})
-            model_prob = model_pred.get('win_prob', 0.0)
+            model_prob = model_pred.get('win_percentage', 0.0) / 100.0  # Convert percentage to decimal
             
             # Adjust model probability for place betting
             if bet_type == 'place':
@@ -103,7 +103,7 @@ class RecommendationService:
                 positions_paid = 3  # Default, could be extracted from race data
                 model_prob = min(model_prob * positions_paid, 0.95)  # Cap at 95%
             
-            # Get market probability
+            # Get market probability (same calculation as runners table)
             market_prob = runner.get('implied_win_prob', 0.0)
             if bet_type == 'place' and market_prob:
                 # Adjust market probability for place betting
@@ -140,7 +140,7 @@ class RecommendationService:
                 'market_label': f"{market.title()} {bet_type.title()}",
                 'odds': odds,
                 'market_pct': market_prob * 100,
-                'model_pct': model_pred.get('win_percentage', 0.0),
+                'model_pct': model_pred.get('win_percentage', 0.0),  # Already in percentage format
                 'blend_pct': blend_prob * 100,
                 'edge_pct': edge_pct,
                 'ev': ev,
