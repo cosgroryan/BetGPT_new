@@ -29,15 +29,47 @@ os.chdir(parent_dir)
 # Import our existing modules from organized script locations
 from recommend_picks_NN import model_win_table
 from pytorch_pre import load_model_and_predict
-from NEW_racing_GUI import (
-    make_session, fetch_meeting_context, fetch_tab_race_node, 
-    extract_prices_from_tab_race, fetch_aff_event, merge_prices_into_event,
-    build_df_for_model, _norm_name_for_join, _imp_from_fixed
-)
 
 # Import our services
 from services.data_service import DataService
 from services.recommendation_service import RecommendationService
+
+# Helper functions (extracted from NEW_racing_GUI.py)
+def _norm_name_for_join(s):
+    """Normalize horse name for matching"""
+    if s is None: 
+        return ""
+    s = str(s).strip().lower()
+    s = "".join(ch for ch in s if ch.isalnum() or ch.isspace())
+    return " ".join(s.split())
+
+def _imp_from_fixed(win_fx):
+    """Calculate implied probability from fixed odds"""
+    try:
+        fx = float(win_fx)
+        return 1.0 / fx if fx > 1.0 else None
+    except Exception:
+        return None
+
+def make_session():
+    """Create a requests session with retry strategy"""
+    import requests
+    from requests.adapters import HTTPAdapter
+    from urllib3.util.retry import Retry
+    
+    session = requests.Session()
+    
+    retry_strategy = Retry(
+        total=3,
+        backoff_factor=1,
+        status_forcelist=[429, 500, 502, 503, 504],
+    )
+    
+    adapter = HTTPAdapter(max_retries=retry_strategy)
+    session.mount("http://", adapter)
+    session.mount("https://", adapter)
+    
+    return session
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)

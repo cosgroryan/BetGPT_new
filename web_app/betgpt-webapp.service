@@ -1,0 +1,33 @@
+[Unit]
+Description=BetGPT Web Application
+After=network.target
+
+[Service]
+Type=exec
+User=www-data
+Group=www-data
+WorkingDirectory=/app
+Environment=PATH=/app/venv/bin
+Environment=FLASK_APP=wsgi.py
+Environment=FLASK_ENV=production
+ExecStart=/app/venv/bin/gunicorn --bind 127.0.0.1:8080 --workers 4 --timeout 30 --keep-alive 2 --max-requests 1000 --max-requests-jitter 100 wsgi:application
+ExecReload=/bin/kill -s HUP $MAINPID
+Restart=always
+RestartSec=10
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/app
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+
+# Resource limits
+LimitNOFILE=65536
+LimitNPROC=4096
+
+[Install]
+WantedBy=multi-user.target

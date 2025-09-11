@@ -15,6 +15,19 @@ from typing import Dict, List, Optional, Tuple
 import logging
 from datetime import datetime, timezone
 import re
+import sys
+import os
+
+# Add the scripts directory to the path
+script_dir = os.path.join(os.path.dirname(__file__), '..', 'scripts', 'web_app_scripts')
+sys.path.append(script_dir)
+
+# Import the lightweight TAB data fetcher
+from tab_data_fetcher import (
+    make_session, 
+    fetch_race_data as fetch_race_data_lightweight,
+    fetch_race_results as fetch_race_results_lightweight
+)
 
 logger = logging.getLogger(__name__)
 
@@ -127,7 +140,7 @@ class DataService:
     
     def fetch_race_data(self, date_str: str, meet_no: int, race_no: int) -> Dict:
         """
-        Fetch complete race data including odds and event details
+        Fetch complete race data including odds and event details using lightweight fetcher
         
         Args:
             date_str: Date in YYYY-MM-DD format
@@ -138,29 +151,11 @@ class DataService:
             Dictionary with complete race data
         """
         try:
-            session = self.make_session()
-            
-            # 1. Fetch odds data
-            race_node = self._fetch_tab_race_node(session, date_str, meet_no, race_no)
-            if not race_node:
-                raise ValueError("Race node not found")
-            
-            prices_by_num = self._extract_prices_from_tab_race(race_node)
-            race_id = str(race_node.get("id", "")).strip()
-            
-            if not race_id:
-                raise ValueError("Race ID not found")
-            
-            # 2. Fetch full event data
-            event = self._fetch_aff_event(session, race_id)
-            if not event or not event.get("data"):
-                raise ValueError("Event data not found")
-            
-            # 3. Merge odds into event data
-            self._merge_prices_into_event(event, prices_by_num)
-            
-            return event
-            
+            session = make_session()
+            result = fetch_race_data_lightweight(session, date_str, meet_no, race_no)
+            if not result:
+                raise ValueError("Race data not found")
+            return result
         except Exception as e:
             self.logger.error(f"Error fetching race data: {e}")
             raise
@@ -317,90 +312,10 @@ class DataService:
         return []
     
     def fetch_race_results(self, date_str: str, meet_no: int, race_no: int) -> Optional[Dict]:
-        """Fetch race results from TAB API"""
+        """Fetch race results from TAB API using lightweight fetcher"""
         try:
-            import requests
-            
-            # Use the TAB results API endpoint
-            results_url = f"https://json.tab.co.nz/results/{date_str}/{meet_no}/{race_no}"
-            
-            response = requests.get(results_url, headers=self.HEADERS, timeout=self.TIMEOUT)
-            
-            if response.status_code != 200:
-                self.logger.warning(f"Results API returned status {response.status_code} for {date_str} M{meet_no} R{race_no}")
-                return None
-            
-            data = response.json()
-            
-            # Extract race results from the JSON structure
-            meetings = data.get('meetings', [])
-            if meetings:
-                meeting = meetings[0]
-                races = meeting.get('races', [])
-                if races:
-                    race = races[0]
-                    
-                    # Check if race is completed
-                    status = race.get('status', '')
-                    if status.lower() == 'complete':
-                        # Extract placings (top 3)
-                        placings = race.get('placings', [])
-                        also_ran = race.get('also_ran', [])
-                        
-                        # Process placings
-                        results = []
-                        for placing in placings:
-                            results.append({
-                                'position': placing.get('rank', 0),
-                                'number': placing.get('number', ''),
-                                'name': placing.get('name', ''),
-                                'jockey': placing.get('jockey', ''),
-                                'margin': placing.get('margin', ''),
-                                'distance': placing.get('distance', ''),
-                                'favouritism': placing.get('favouritism', ''),
-                                'win_odds': placing.get('win_odds', ''),
-                                'place_odds': placing.get('place_odds', '')
-                            })
-                        
-                        # Process also ran (positions 4+)
-                        for runner in also_ran:
-                            finish_pos = runner.get('finish_position', 0)
-                            if finish_pos > 0:  # Only include runners that actually finished
-                                results.append({
-                                    'position': finish_pos,
-                                    'number': runner.get('number', ''),
-                                    'name': runner.get('name', ''),
-                                    'jockey': runner.get('jockey', ''),
-                                    'margin': '',
-                                    'distance': runner.get('distance', ''),
-                                    'favouritism': '',
-                                    'win_odds': '',
-                                    'place_odds': ''
-                                })
-                        
-                        # Sort by position
-                        results.sort(key=lambda x: x['position'])
-                        
-                        return {
-                            'race_info': {
-                                'date': date_str,
-                                'meet_no': meet_no,
-                                'race_no': race_no,
-                                'name': race.get('name', ''),
-                                'status': status,
-                                'distance': race.get('distance', ''),
-                                'class': race.get('class', ''),
-                                'stake': race.get('stake', 0)
-                            },
-                            'results': results,
-                            'scratchings': race.get('scratchings', [])
-                        }
-                    else:
-                        self.logger.info(f"Race {date_str} M{meet_no} R{race_no} status: {status} (not complete)")
-                        return None
-            
-            return None
-            
+            session = make_session()
+            return fetch_race_results_lightweight(session, date_str, meet_no, race_no)
         except Exception as e:
             self.logger.error(f"Error fetching race results: {str(e)}")
             return None
