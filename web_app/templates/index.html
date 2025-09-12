@@ -232,14 +232,18 @@ function loadRace() {
     fetch(`/api/race/${date}/${meetNo}/${raceNo}`)
         .then(response => response.json())
         .then(data => {
+            console.log('Race data received, calling hideLoading()');
             hideLoading();
             if (data.error) {
                 alert('Error: ' + data.error);
                 return;
             }
+            console.log('Calling displayRaceData()');
             displayRaceData(data);
+            console.log('displayRaceData() completed');
         })
         .catch(error => {
+            console.log('Error occurred, calling hideLoading()');
             hideLoading();
             console.error('Error:', error);
             alert('Error loading race data');
@@ -401,15 +405,76 @@ function showLoading() {
 }
 
 function hideLoading() {
-    const modal = bootstrap.Modal.getInstance(document.getElementById('loadingModal'));
-    if (modal) {
-        modal.hide();
+    console.log('hideLoading() called');
+    
+    // Try multiple methods to hide the loading modal
+    const modalElement = document.getElementById('loadingModal');
+    if (!modalElement) {
+        console.log('Loading modal element not found');
+        return;
     }
+    
+    // Method 1: Try to get existing instance and hide
+    const modal = bootstrap.Modal.getInstance(modalElement);
+    if (modal) {
+        console.log('Found existing modal instance, hiding...');
+        modal.hide();
+    } else {
+        console.log('No existing modal instance, trying direct hide...');
+        // Method 2: Create new instance and hide
+        const newModal = new bootstrap.Modal(modalElement);
+        newModal.hide();
+    }
+    
+    // Method 3: Force hide with DOM manipulation (fallback)
+    setTimeout(() => {
+        if (modalElement.classList.contains('show')) {
+            console.log('Modal still showing, forcing hide...');
+            modalElement.classList.remove('show');
+            modalElement.style.display = 'none';
+            modalElement.setAttribute('aria-hidden', 'true');
+            modalElement.removeAttribute('aria-modal');
+            
+            // Remove modal backdrop
+            const backdrops = document.querySelectorAll('.modal-backdrop');
+            backdrops.forEach(backdrop => backdrop.remove());
+            
+            // Remove modal-open class from body
+            document.body.classList.remove('modal-open');
+            document.body.style.paddingRight = '';
+            document.body.style.overflow = '';
+        }
+    }, 100);
 }
 
 function showAbout() {
     const modal = new bootstrap.Modal(document.getElementById('aboutModal'));
     modal.show();
 }
+
+// Global function to clear stuck modals (can be called manually)
+window.clearStuckModals = function() {
+    console.log('Clearing stuck modals...');
+    
+    // Hide all modals
+    const modals = document.querySelectorAll('.modal');
+    modals.forEach(modal => {
+        modal.classList.remove('show');
+        modal.style.display = 'none';
+        modal.setAttribute('aria-hidden', 'true');
+        modal.removeAttribute('aria-modal');
+    });
+    
+    // Remove all modal backdrops
+    const backdrops = document.querySelectorAll('.modal-backdrop');
+    backdrops.forEach(backdrop => backdrop.remove());
+    
+    // Reset body styles
+    document.body.classList.remove('modal-open');
+    document.body.style.paddingRight = '';
+    document.body.style.overflow = '';
+    
+    console.log('Stuck modals cleared');
+};
 </script>
 {% endblock %}
