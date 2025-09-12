@@ -200,11 +200,16 @@
 
 {% block extra_scripts %}
 <script>
-// Set today's date as default
-document.getElementById('raceDate').value = new Date().toISOString().split('T')[0];
-
 // Global variables
 let currentRaceData = null;
+
+// Set today's date as default in NZ timezone
+document.addEventListener('DOMContentLoaded', function() {
+    const nzDate = new Date().toLocaleDateString('en-CA', { 
+        timeZone: 'Pacific/Auckland' 
+    });
+    document.getElementById('raceDate').value = nzDate;
+});
 
 // Form submission
 document.getElementById('raceForm').addEventListener('submit', function(e) {
